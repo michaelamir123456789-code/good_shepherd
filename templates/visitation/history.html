@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty, pager %}
+{% block title %}{{ t('سجل الافتقاد','Visit history') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('سجل الافتقاد','Visit history') }}</h1>
+    <p class="sub">{{ t('كل الافتقادات التي تمت لأطفال الفصل — من قام بها وماذا كُتب — وأطفال لم يُفتقدوا بعد.','Every visit made to the class’s kids — who made it and what was written — and the kids not visited yet.') }}</p></div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('visitation.history_pdf', **filter_args) }}">{{ icon('download') }} {{ t('تنزيل التقرير PDF','Download report (PDF)') }}</a>
+  </div>
+</div>
+{% set active = 'history' %}{% set selected_class = selected_class %}{% include 'visitation/_tabs.html' %}
+
+<form method="get" class="filter-bar">
+  {% if classes|length > 1 %}
+  <select class="select" name="class_id" data-autosubmit aria-label="{{ t('الفصل','Class') }}">
+    <option value="">{{ t('كل الفصول','All classes') }}</option>
+    {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == selected_class }}>{{ c.grade.display_name(current_lang) }} — {{ c.display_name(current_lang) }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <select class="select" name="period" data-autosubmit aria-label="{{ t('الفترة','Period') }}">
+    <option value="30" {{ 'selected' if period == '30' }}>{{ t('آخر 30 يوماً','Last 30 days') }}</option>
+    <option value="90" {{ 'selected' if period == '90' }}>{{ t('آخر 90 يوماً','Last 90 days') }}</option>
+    <option value="365" {{ 'selected' if period == '365' }}>{{ t('آخر سنة','Last year') }}</option>
+    <option value="all" {{ 'selected' if period == 'all' }}>{{ t('كل الفترات','All time') }}</option>
+  </select>
+  <select class="select" name="by" data-autosubmit aria-label="{{ t('من افتقد','Visited by') }}">
+    <option value="all" {{ 'selected' if by == 'all' }}>{{ t('كل الخدام','All servants') }}</option>
+    <option value="me" {{ 'selected' if by == 'me' }}>{{ t('افتقاداتي أنا فقط','My visits only') }}</option>
+  </select>
+</form>
+
+<div class="grid c3 mb-1">
+  <div class="card stat"><span class="ico">{{ icon('heart') }}</span><div><div class="val">{{ visits_total }}</div><div class="lbl">{{ t('افتقاد في هذه الفترة','visits in this period') }}</div></div></div>
+  <div class="card stat ok"><span class="ico">{{ icon('check') }}</span><div><div class="val">{{ visited_kids }}</div><div class="lbl">{{ t('طفل تم افتقاده','kids visited') }}</div></div></div>
+  <div class="card stat {{ 'bad' if not_visited else 'ok' }}"><span class="ico">{{ icon('alert') }}</span><div><div class="val">{{ not_visited|length }}</div><div class="lbl">{{ t('لم يُفتقدوا بعد','not visited yet') }}</div></div></div>
+</div>
+
+<div class="section-title"><h2>{{ icon('scroll') }} {{ t('ما تم من افتقاد','What was done') }}</h2></div>
+{% if visits %}
+<div class="card"><div class="table-wrap">
+<table class="table table-cards">
+  <thead><tr><th>{{ t('التاريخ','Date') }}</th><th>{{ t('الطفل','Kid') }}</th><th>{{ t('النوع','Type') }}</th><th>{{ t('من افتقده','Visited by') }}</th><th>{{ t('الملاحظات','Notes') }}</th><th></th></tr></thead>
+  <tbody>
+  {% for v in visits %}
+  <tr>
+    <td class="main nowrap"><b class="num">{{ v.visit_date|fdate(weekday=False) }}</b></td>
+    <td data-label="{{ t('الطفل','Kid') }}"><div class="row">{{ avatar(v.kid,'sm') }}<div><a class="strong" href="{{ url_for('profiles.view', kid_id=v.kid.id) }}">{{ v.kid.display_name(current_lang) }}</a>
+      <div class="xs muted">{{ v.kid.klass.display_name(current_lang) if v.kid.klass }}</div></div></div></td>
+    <td data-label="{{ t('النوع','Type') }}"><span class="badge b-brand">{{ types.get(v.visit_type, v.visit_type) }}</span></td>
+    <td data-label="{{ t('من افتقده','By') }}">{{ v.servant.display_name(current_lang) if v.servant else '—' }}{% if v.servant_id == current_user.id %} <span class="badge b-gold">{{ t('أنت','You') }}</span>{% endif %}</td>
+    <td data-label="{{ t('الملاحظات','Notes') }}" class="pre-wrap">{{ v.notes or '—' }}</td>
+    <td data-label="" class="end">
+      {% if v.servant_id == current_user.id or current_user.is_manager %}
+      <form method="post" class="inline" action="{{ url_for('visitation.delete_visit', visit_id=v.id) }}" data-confirm="{{ t('حذف سجل الافتقاد هذا؟','Delete this visit entry?') }}">{{ csrf() }}
+        <button class="btn btn-ghost btn-sm btn-icon" type="submit" aria-label="{{ t('حذف','Delete') }}">{{ icon('trash') }}</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{{ pager(pagination, 'visitation.history', **filter_args) }}
+{% else %}
+<div class="card">{% call empty('heart', t('لا توجد افتقادات في هذه الفترة','No visits in this period'), t('عندما تسجّل افتقاداً من تبويب «المطلوب افتقادهم» سيظهر هنا.','When you log a visit from the “Needs a visit” tab it will show here.')) %}{% endcall %}</div>
+{% endif %}
+
+<div class="section-title"><h2>{{ icon('alert') }} {{ t('لم يُفتقدوا بعد','Not visited yet') }}</h2></div>
+{% if not_visited %}
+<div class="card"><ul class="list">
+  {% for k in not_visited %}
+  <li>{{ avatar(k,'sm') }}
+    <div class="grow"><a class="strong" href="{{ url_for('profiles.view', kid_id=k.id) }}">{{ k.display_name(current_lang) }}</a>
+      <div class="meta">{{ k.klass.display_name(current_lang) if k.klass }}{% if k.area %} · {{ k.area }}{% endif %}</div></div>
+    {% if k.primary_phone %}<a class="btn btn-soft btn-sm btn-icon" href="tel:{{ k.primary_phone }}" aria-label="{{ t('اتصال','Call') }}">{{ icon('phone') }}</a>{% endif %}
+  </li>{% endfor %}
+</ul></div>
+{% else %}
+<div class="card">{% call empty('check', t('تم افتقاد كل الأطفال مرة على الأقل','Every kid has been visited at least once')) %}{% endcall %}</div>
+{% endif %}
+{% endblock %}

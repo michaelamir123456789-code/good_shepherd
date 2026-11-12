@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}{{ t('مرحلة','Grade') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('admin.grades') }}">{{ icon('chev','i-flip') }} {{ t('المراحل','Grades') }}</a>
+<div class="page-head"><h1>{{ t('مرحلة جديدة','New grade') if mode=='new' else t('تعديل المرحلة','Edit grade') }}</h1></div>
+<div class="card pad narrow">
+<form method="post" novalidate data-once>{{ csrf() }}
+  {{ field('name_ar', t('الاسم بالعربية','Arabic name'), form.get('name_ar', grade.name_ar if grade else ''), required=True, maxlength=120) }}
+  {{ field('name_en', t('الاسم بالإنجليزية (اختياري)','English name (optional)'), form.get('name_en', grade.name_en if grade else ''), ltr=True, maxlength=120) }}
+  {{ field('sort_order', t('الترتيب','Order'), form.get('sort_order', grade.sort_order if grade else 0), type='number', ltr=True, help=t('رقم أصغر = يظهر أولاً','Lower number = shown first')) }}
+  <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('check') }} {{ t('حفظ','Save') }}</button>
+    <a class="btn btn-ghost" href="{{ url_for('admin.grades') }}">{{ t('إلغاء','Cancel') }}</a></div>
+</form></div>
+{% endblock %}

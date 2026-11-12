@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}{{ t('الإعدادات','Settings') }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ t('الإعدادات','Settings') }}</h1></div></div>
+<form method="post" novalidate data-once class="stack narrow-lg">{{ csrf() }}
+<div class="card pad">
+  <h3 class="mb-1">{{ t('اسم الكنيسة / الخدمة','Church / service name') }}</h3>
+  <div class="form-grid">
+    {{ field('church_name_ar', t('بالعربية','Arabic'), s.church_name_ar, maxlength=120) }}
+    {{ field('church_name_en', t('بالإنجليزية','English'), s.church_name_en, ltr=True, maxlength=120) }}
+  </div>
+</div>
+<div class="card pad">
+  <h3 class="mb-1">{{ t('الحضور والمتابعة','Attendance & follow-up') }}</h3>
+  <div class="form-grid">
+    <div class="field"><label for="attendance_day">{{ t('يوم الاجتماع','Meeting day') }}</label>
+      <select class="select" id="attendance_day" name="attendance_day">
+        {% for d in days %}<option value="{{ d }}" {{ 'selected' if s.attendance_day == d }}>{{ weekday_labels[d] }}</option>{% endfor %}
+      </select>
+      <span class="help">{{ t('الحضور يُسجَّل لأحدث يوم اجتماع حتى اليوم.','Attendance is recorded for the most recent meeting day up to today.') }}</span></div>
+    <div class="field"><label for="absence_threshold">{{ t('تنبيه الغياب المتتالي بعد','Alert after consecutive absences') }}</label>
+      <input class="input ltr" id="absence_threshold" name="absence_threshold" type="number" min="1" max="20" value="{{ s.absence_threshold }}" dir="ltr">
+      <span class="help">{{ t('يُستخدم في الرئيسية والافتقاد.','Used on the dashboards and in visitation.') }}</span></div>
+  </div>
+</div>
+<div class="card pad">
+  <h3 class="mb-1">{{ icon('user-plus') }} {{ t('حسابات الخدام','Servant accounts') }}</h3>
+  <label class="check"><input type="checkbox" name="signup_open" value="1" {{ 'checked' if s.signup_open }}> {{ t('السماح للخدام بطلب إنشاء حساب بأنفسهم','Let servants request their own account') }}</label>
+  <p class="help m-0">{{ t('كل طلب يحتاج موافقة مسؤول المرحلة أو القائد قبل أن يعمل الحساب.','Every request needs the grade admin’s or leader’s approval before the account works.') }}</p>
+</div>
+<div class="form-actions"><button class="btn btn-primary btn-lg" type="submit">{{ icon('check') }} {{ t('حفظ الإعدادات','Save settings') }}</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, status_badge %}
+{% block title %}{{ t('تقرير يومي','Daily report') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('reports.hub', date=target_date.isoformat()) }}">{{ icon('chev','i-flip') }} {{ t('التقارير','Reports') }}</a>
+<div class="page-head">
+  <div><h1>{{ klass.display_name(current_lang) }}</h1><p class="sub">{{ target_date|fdate }}</p></div>
+  <div class="actions no-print">
+    <a class="btn btn-ghost" href="{{ url_for('attendance.take', class_id=klass.id, date=target_date.isoformat()) }}">{{ icon('edit') }} {{ t('تسجيل / تعديل','Take / edit') }}</a>
+    <button class="btn btn-ghost" type="button" data-print>{{ icon('printer') }} {{ t('طباعة','Print') }}</button>
+    <a class="btn btn-soft" href="{{ url_for('reports.pdf_daily', class_id=klass.id, date=target_date.isoformat()) }}">{{ icon('file') }} PDF</a>
+    <a class="btn btn-ghost" href="{{ url_for('reports.pdf_period', class_id=klass.id) }}">{{ icon('file') }} {{ t('آخر 8 اجتماعات PDF','Last 8 meetings PDF') }}</a>
+    <a class="btn btn-ghost" href="{{ url_for('reports.export_daily', class_id=klass.id, date=target_date.isoformat()) }}">{{ icon('download') }} Excel</a>
+  </div>
+</div>
+<div class="row wrap mb-1">
+  <span class="badge b-ok">{{ t('حاضر','Present') }} {{ stats.present }}</span>
+  <span class="badge b-bad">{{ t('غائب','Absent') }} {{ stats.absent }}</span>
+  <span class="badge b-warn">{{ t('معذور','Excused') }} {{ stats.excused }}</span>
+  {% if stats.missing %}<span class="badge">{{ t('لم يُسجَّل','Not recorded') }} {{ stats.missing }}</span>{% endif %}
+</div>
+<div class="card"><div class="table-wrap">
+<table class="table table-cards">
+  <thead><tr><th>{{ t('الطفل','Kid') }}</th><th>{{ t('الحالة','Status') }}</th><th>{{ t('ملاحظة','Note') }}</th><th>{{ t('سجّلها','Recorded by') }}</th></tr></thead>
+  <tbody>
+  {% for kid, rec in rows %}
+  <tr>
+    <td class="main"><div class="row">{{ avatar(kid,'sm') }}<a class="strong" href="{{ url_for('reports.kid_history', kid_id=kid.id) }}">{{ kid.display_name(current_lang) }}</a></div></td>
+    <td data-label="{{ t('الحالة','Status') }}">{{ status_badge(rec.status if rec else none, current_lang) }}</td>
+    <td data-label="{{ t('ملاحظة','Note') }}" class="muted">{{ rec.excuse_note if rec and rec.excuse_note else '—' }}</td>
+    <td data-label="{{ t('سجّلها','By') }}" class="muted small">{{ rec.taken_by.display_name(current_lang) if rec and rec.taken_by else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

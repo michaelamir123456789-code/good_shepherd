@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}{{ t('قائمة الافتقاد','Visitation list') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('قائمة الافتقاد','Visitation list') }}{% if area %} — {{ area }}{% endif %}</h1><p class="sub">{{ today|fdate }}</p></div>
+  <div class="actions no-print">
+    <a class="btn btn-ghost" href="{{ url_for('visitation.plan', area=area or None) }}">{{ t('رجوع','Back') }}</a>
+    <button class="btn btn-primary" type="button" data-print>{{ icon('printer') }} {{ t('طباعة','Print') }}</button>
+  </div>
+</div>
+<div class="card"><div class="table-wrap"><table class="table">
+  <thead><tr><th>#</th><th>{{ t('الطفل','Kid') }}</th><th>{{ t('الفصل','Class') }}</th><th>{{ t('المنطقة','Area') }}</th><th>{{ t('العنوان','Address') }}</th><th>{{ t('الهاتف','Phone') }}</th><th>{{ t('السبب','Reason') }}</th></tr></thead>
+  <tbody>{% for r in rows %}{% set k = r.kid %}
+    <tr><td class="num">{{ loop.index }}</td><td><b>{{ k.display_name(current_lang) }}</b></td>
+      <td>{{ k.klass.display_name(current_lang) if k.klass }}</td><td>{{ k.area or '—' }}</td><td>{{ k.address or '—' }}</td>
+      <td class="nowrap" dir="ltr">{{ k.primary_phone or '—' }}</td>
+      <td class="small">{% if r.alert %}{{ t('غياب','Absent') }} ×{{ r.streak }}{% elif r.never %}{{ t('لم يُفتقد','Never visited') }}{% else %}{{ r.last_visit|fdate(weekday=False) }}{% endif %}</td></tr>
+  {% endfor %}</tbody></table></div></div>
+{% endblock %}

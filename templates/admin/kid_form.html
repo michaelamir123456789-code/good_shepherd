@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, field %}
+{% block title %}{{ t('طفل','Kid') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('profiles.view', kid_id=kid.id) if kid else (url_for('admin.kids') if current_user.is_manager else url_for('dashboard.home')) }}">{{ icon('chev','i-flip') }} {{ t('رجوع','Back') }}</a>
+<div class="page-head"><h1>{{ t('طفل جديد','New kid') if mode=='new' else t('تعديل بيانات الطفل','Edit kid') }}</h1></div>
+<form method="post" enctype="multipart/form-data" novalidate data-once class="stack">{{ csrf() }}
+
+<div class="card pad">
+  <h3 class="mb-1">{{ icon('camera') }} {{ t('الصورة','Photo') }}</h3>
+  <div class="photo-box">
+    {% if kid %}{{ avatar(kid, 'xxl') }}{% endif %}
+    <div class="field m-0">
+      <input class="input" type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/*">
+      <span class="help">{{ t('JPG أو PNG أو WEBP — تُقصّ مربعة وتُصغَّر تلقائياً. اختيارية.','JPG, PNG or WEBP — auto-cropped square and resized. Optional.') }}</span>
+      {% if kid and kid.photo_filename %}<label class="check"><input type="checkbox" name="remove_photo" value="1"> {{ t('حذف الصورة الحالية','Remove current photo') }}</label>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card pad">
+  <h3 class="mb-1">{{ t('البيانات الأساسية','Basics') }}</h3>
+  <div class="form-grid">
+    {{ field('name_ar', t('الاسم','Name'), form.get('name_ar', kid.name_ar if kid else ''), required=True, maxlength=120, full=True) }}
+    <div class="field"><label for="f-class_id">{{ t('الفصل','Class') }}{% if not current_user.is_admin %} <span class="req">*</span>{% endif %}</label>
+      {% set cur = (form.get('class_id') if form.get('class_id') is not none else (kid.class_id if kid else '')) %}
+      <select class="select" id="f-class_id" name="class_id">
+        {% if current_user.is_admin %}<option value="">{{ t('— بدون فصل —','— No class —') }}</option>{% endif %}
+        {% for c in all_classes %}<option value="{{ c.id }}" {{ 'selected' if cur|string == c.id|string }}>{{ c.grade.display_name(current_lang) }} — {{ c.display_name(current_lang) }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="f-gender">{{ t('النوع','Gender') }}</label>
+      {% set g = form.get('gender', kid.gender if kid else '') %}
+      <select class="select" id="f-gender" name="gender"><option value="">—</option>
+        <option value="male" {{ 'selected' if g=='male' }}>{{ t('ولد','Boy') }}</option><option value="female" {{ 'selected' if g=='female' }}>{{ t('بنت','Girl') }}</option></select></div>
+    {{ field('birth_date', t('تاريخ الميلاد','Birth date'), form.get('birth_date', kid.birth_date.isoformat() if kid and kid.birth_date else ''), type='date', ltr=True) }}
+    {{ field('school', t('المدرسة','School'), form.get('school', kid.school or '' if kid else ''), maxlength=120) }}
+  </div>
+</div>
+
+<div class="card pad">
+  <h3 class="mb-1">{{ icon('users') }} {{ t('الأسرة','Family') }}</h3>
+  <div class="form-grid">
+    {{ field('mother_name', t('اسم الأم','Mother’s name'), form.get('mother_name', kid.mother_name or '' if kid else ''), maxlength=120) }}
+    {{ field('confession_father', t('أب الاعتراف','Father of confession'), form.get('confession_father', kid.confession_father or '' if kid else ''), maxlength=120) }}
+    {{ field('father_phone', t('هاتف الأب','Father phone'), form.get('father_phone', kid.father_phone or '' if kid else ''), type='tel', ltr=True, maxlength=25) }}
+    {{ field('mother_phone', t('هاتف الأم','Mother phone'), form.get('mother_phone', kid.mother_phone or '' if kid else ''), type='tel', ltr=True, maxlength=25) }}
+    {{ field('kid_phone', t('هاتف الطفل','Kid phone'), form.get('kid_phone', kid.kid_phone or '' if kid else ''), type='tel', ltr=True, maxlength=25) }}
+    {{ field('siblings', t('الإخوة والأخوات','Brothers & sisters'), form.get('siblings', kid.siblings or '' if kid else ''), maxlength=500) }}
+  </div>
+</div>
+
+<div class="card pad">
+  <h3 class="mb-1">{{ icon('pin') }} {{ t('السكن (للافتقاد)','Where they live (for visits)') }}</h3>
+  <div class="form-grid">
+    {{ field('area', t('المنطقة','Area'), form.get('area', kid.area or '' if kid else ''), maxlength=80, help=t('نستخدمها لتجميع الافتقاد حسب المنطقة','Used to group visits by area')) }}
+    {{ field('address', t('العنوان / الموقع','Address / location'), form.get('address', kid.address or '' if kid else ''), maxlength=255) }}
+    <div class="field full"><label for="f-general_notes">{{ t('ملاحظات','Notes') }}</label>
+      <textarea class="textarea" id="f-general_notes" name="general_notes" maxlength="5000">{{ form.get('general_notes', kid.general_notes or '' if kid else '') }}</textarea></div>
+  </div>
+</div>
+
+<div class="form-actions"><button class="btn btn-primary btn-lg" type="submit">{{ icon('check') }} {{ t('حفظ','Save') }}</button>
+  <a class="btn btn-ghost btn-lg" href="{{ url_for('profiles.view', kid_id=kid.id) if kid else (url_for('admin.kids') if current_user.is_manager else url_for('dashboard.home')) }}">{{ t('إلغاء','Cancel') }}</a></div>
+</form>
+{% endblock %}

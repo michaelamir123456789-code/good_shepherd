@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf %}
+{% block title %}{{ t('استيراد أطفال من Excel','Import kids from Excel') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('profiles.roster', class_id=selected) if selected else url_for('dashboard.home') }}">{{ icon('chev','i-flip') }} {{ t('رجوع','Back') }}</a>
+<div class="page-head"><div><h1>{{ t('استيراد أطفال من Excel','Import kids from Excel') }}</h1>
+  <p class="sub">{{ t('كل الأطفال في الملف سيدخلون الفصل الذي تختاره. راجع المعاينة قبل التأكيد.','Every kid in the file goes into the class you choose. Review the preview before confirming.') }}</p></div></div>
+
+{% if not parsed %}
+<div class="cols">
+  <div class="card pad">
+    <form method="post" enctype="multipart/form-data" data-once>{{ csrf() }}
+      <input type="hidden" name="action" value="upload">
+      <h3 class="mb-1">{{ t('1. اختر الفصل','1. Choose the class') }}</h3>
+      <div class="field">
+        <select class="select" name="class_id" required aria-label="{{ t('الفصل','Class') }}">
+          <option value="">{{ t('— اختر الفصل —','— Choose the class —') }}</option>
+          {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if selected == c.id }}>{{ c.grade.display_name(current_lang) }} — {{ c.display_name(current_lang) }}</option>{% endfor %}
+        </select>
+      </div>
+      <h3 class="mb-1">{{ t('2. ارفع الملف','2. Upload the file') }}</h3>
+      <div class="field"><input class="input" type="file" name="file" accept=".xlsx,.xlsm,.csv" required></div>
+      <p class="help">{{ t('.xlsx أو .csv — حتى 5 ميجا و3000 صف.','.xlsx or .csv — up to 5 MB and 3000 rows.') }}</p>
+      <button class="btn btn-primary btn-lg" type="submit">{{ icon('search') }} {{ t('معاينة','Preview') }}</button>
+    </form>
+  </div>
+  <div class="card pad stack-sm">
+    <h3>{{ icon('file') }} {{ t('كيف يجب أن يكون الملف؟','How should the file look?') }}</h3>
+    <p class="small muted m-0">{{ t('المطلوب فقط عمود «الاسم». باقي الأعمدة اختيارية، وما ينقص يُترك فارغاً:','Only the «Name» column is required. The rest is optional and anything missing stays empty:') }}</p>
+    <p class="small m-0">{{ t('الاسم · اسم الأم · هاتف الأب · هاتف الأم · المدرسة · العنوان · المنطقة · تاريخ الميلاد · الإخوة والأخوات · أب الاعتراف · ملاحظات','Name · Mother’s name · Father phone · Mother phone · School · Address · Area · Birth date · Siblings · Father of confession · Notes') }}</p>
+    <p class="small muted m-0">{{ t('أي عمود آخر في ملفك لا نعرفه يُحفظ كاملاً داخل «ملاحظات» الطفل — لا يضيع شيء. أسماء الأعمدة المختلفة (مثل «تليفون الأب» أو «موبايل ماما») تُفهم تلقائياً.','Any other column in your file is saved in the kid’s Notes — nothing is lost. Different column names (like “Dad’s mobile”) are recognised automatically.') }}</p>
+    <p class="small muted m-0">{{ t('إذا استوردت الملف مرة ثانية، تُستكمل البيانات الناقصة للأطفال الموجودين دون تغيير ما هو مكتوب.','If you import the same file again, missing data of existing kids is filled in — nothing already written is changed.') }}</p>
+    <a class="btn btn-soft" href="{{ url_for('admin.kids_import_template') }}">{{ icon('download') }} {{ t('تحميل القالب','Download template') }}</a>
+  </div>
+</div>
+
+{% else %}
+<div class="notice n-info mb-1">{{ icon('school') }}<span>{{ t('سيتم الاستيراد إلى','Importing into') }} <b>{{ klass.grade.display_name(current_lang) }} — {{ klass.display_name(current_lang) }}</b> · {{ filename }}{% if parsed.sheet %} · {{ parsed.sheet }}{% endif %}</span></div>
+
+<div class="grid c4 mb-1">
+  <div class="card stat ok"><span class="ico">{{ icon('users') }}</span><div><div class="val">{{ plan.created }}</div><div class="lbl">{{ t('أطفال جدد','New kids') }}</div></div></div>
+  <div class="card stat gold"><span class="ico">{{ icon('edit') }}</span><div><div class="val">{{ plan.updated }}</div><div class="lbl">{{ t('تُستكمل بياناتهم','Data filled in') }}</div></div></div>
+  <div class="card stat"><span class="ico">{{ icon('school') }}</span><div><div class="val">{{ plan.adopted }}</div><div class="lbl">{{ t('بلا فصل ← يُنقلون إلى الفصل','Had no class → moved in') }}</div></div></div>
+  <div class="card stat warn"><span class="ico">{{ icon('check') }}</span><div><div class="val">{{ plan.unchanged }}</div><div class="lbl">{{ t('موجودون بالفعل (بلا تغيير)','Already there (unchanged)') }}</div></div></div>
+</div>
+
+<div class="card mb-1">
+  <div class="card-head"><h3>{{ icon('check') }} {{ t('كيف فهمنا أعمدة الملف','How we read your columns') }}</h3></div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>{{ t('عنوان العمود في ملفك','Column in your file') }}</th><th>{{ t('يُحفظ في','Saved as') }}</th></tr></thead>
+    <tbody>
+      {% for m in parsed.mapping %}<tr><td><b>{{ m.header }}</b></td><td><span class="badge b-ok">{{ icon('check') }} {{ m.label }}</span></td></tr>{% endfor %}
+      {% for h in parsed.extras %}<tr><td><b>{{ h }}</b></td><td><span class="badge b-info">{{ icon('note') }} {{ t('ملاحظات الطفل','Kid’s notes') }}</span></td></tr>{% endfor %}
+      {% for h in parsed.ignored %}<tr><td class="muted">{{ h }}</td><td><span class="badge">{{ t('تم تجاهله (الفصل تختاره أنت)','Ignored (you chose the class)') }}</span></td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+
+{% if parsed.warnings %}
+<div class="notice n-warn mb-1">{{ icon('alert') }}<div><b>{{ parsed.warnings|length }} {{ t('صف لن يُستورد:','row(s) will NOT be imported:') }}</b>
+  <ul class="m-0">{% for w in parsed.warnings[:10] %}<li>{{ w }}</li>{% endfor %}{% if parsed.warnings|length > 10 %}<li>…</li>{% endif %}</ul></div></div>
+{% endif %}
+{% if parsed.notes %}
+<div class="notice n-info mb-1">{{ icon('info') }}<div><b>{{ parsed.notes|length }} {{ t('ملاحظة — لم تمنع الاستيراد ولم يضع شيء:','note(s) — nothing was lost:') }}</b>
+  <ul class="m-0">{% for w in parsed.notes[:8] %}<li>{{ w }}</li>{% endfor %}{% if parsed.notes|length > 8 %}<li>…</li>{% endif %}</ul></div></div>
+{% endif %}
+
+<div class="card mb-1">
+  <div class="card-head"><h3>{{ t('معاينة أول الصفوف — تأكد أن البيانات في مكانها','First rows — check the data is in the right place') }}</h3></div>
+  <div class="table-wrap"><table class="table preview-table">
+    <thead><tr><th>{{ t('الاسم','Name') }}</th><th>{{ t('اسم الأم','Mother') }}</th><th>{{ t('هاتف الأب','Father ☎') }}</th><th>{{ t('هاتف الأم','Mother ☎') }}</th><th>{{ t('المدرسة','School') }}</th><th>{{ t('المنطقة','Area') }}</th><th>{{ t('الميلاد','Born') }}</th><th>{{ t('ملاحظات','Notes') }}</th></tr></thead>
+    <tbody>{% for r in preview %}<tr>
+      <td><b>{{ r.name_ar }}</b></td><td>{{ r.mother_name or '—' }}</td>
+      <td dir="ltr" class="num">{{ r.father_phone or '—' }}</td><td dir="ltr" class="num">{{ r.mother_phone or '—' }}</td>
+      <td>{{ r.school or '—' }}</td><td>{{ r.area or '—' }}</td><td class="num">{{ r.birth_date or '—' }}</td>
+      <td class="small">{{ (r.notes or '—')|truncate(60) }}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+
+<div class="row wrap">
+  <form method="post" data-once>{{ csrf() }}<input type="hidden" name="action" value="confirm">
+    <button class="btn btn-primary btn-lg" type="submit">{{ icon('check') }} {{ t('تأكيد الاستيراد','Confirm import') }} ({{ parsed.rows|length }})</button></form>
+  <form method="post">{{ csrf() }}<input type="hidden" name="action" value="cancel">
+    <button class="btn btn-ghost btn-lg" type="submit">{{ t('إلغاء','Cancel') }}</button></form>
+</div>
+{% endif %}
+{% endblock %}

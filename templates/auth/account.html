@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}{{ t('حسابي','My account') }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ t('حسابي','My account') }}</h1>
+  <p class="sub">{{ t('يمكنك الدخول باسم المستخدم أو رقم الهاتف.','You can sign in with your username or phone number.') }}</p></div></div>
+<form method="post" novalidate data-once class="stack narrow">{{ csrf() }}
+<div class="card pad">
+  {{ field('name_ar', t('الاسم','Name'), form.get('name_ar', current_user.name_ar), required=True, maxlength=120) }}
+  {{ field('username', t('اسم المستخدم','Username'), form.get('username', current_user.username or ''), ltr=True, maxlength=30, help=t('إنجليزي بدون مسافات، مثال: michael.amir','English letters, no spaces, e.g. michael.amir')) }}
+  {{ field('phone', t('رقم الهاتف','Phone number'), form.get('phone', current_user.phone or ''), type='tel', ltr=True, maxlength=20) }}
+  {{ field('email', t('البريد الإلكتروني (اختياري)','E-mail (optional)'), form.get('email', current_user.display_email), type='email', ltr=True, maxlength=120) }}
+</div>
+<div class="card pad">
+  <h3 class="mb-sm">{{ icon('lock') }} {{ t('تأكيد','Confirm') }}</h3>
+  <div class="field m-0"><label for="current_password">{{ t('كلمة المرور الحالية','Current password') }}</label>
+    <input class="input ltr" id="current_password" name="current_password" type="password" autocomplete="current-password" dir="ltr" maxlength="256">
+    <span class="help">{{ t('مطلوبة فقط عند تغيير اسم المستخدم أو الهاتف أو البريد.','Only needed when you change your username, phone or e-mail.') }}</span></div>
+</div>
+<div class="form-actions"><button class="btn btn-primary btn-lg" type="submit">{{ icon('check') }} {{ t('حفظ','Save') }}</button>
+  <a class="btn btn-ghost btn-lg" href="{{ url_for('dashboard.home') }}">{{ t('إلغاء','Cancel') }}</a></div>
+</form>
+{% endblock %}

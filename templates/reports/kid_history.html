@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, status_badge, empty %}
+{% block title %}{{ kid.display_name(current_lang) }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('profiles.view', kid_id=kid.id) }}">{{ icon('chev','i-flip') }} {{ t('الملف الشخصي','Profile') }}</a>
+<div class="page-head">
+  <div class="row">{{ avatar(kid,'lg') }}<div><h1>{{ kid.display_name(current_lang) }}</h1><p class="sub">{{ t('سجل الحضور','Attendance history') }}</p></div></div>
+</div>
+<div class="grid c4 mb-1">
+  <div class="card stat ok"><span class="ico">{{ icon('check') }}</span><div><div class="val">{{ stats.present }}</div><div class="lbl">{{ t('حاضر','Present') }}</div></div></div>
+  <div class="card stat bad"><span class="ico">{{ icon('x') }}</span><div><div class="val">{{ stats.absent }}</div><div class="lbl">{{ t('غائب','Absent') }}</div></div></div>
+  <div class="card stat warn"><span class="ico">{{ icon('clock') }}</span><div><div class="val">{{ stats.excused }}</div><div class="lbl">{{ t('معذور','Excused') }}</div></div></div>
+  <div class="card stat"><span class="ico">{{ icon('chart') }}</span><div><div class="val">{{ stats.percent }}%</div><div class="lbl">{{ t('نسبة الحضور','Rate') }}</div></div></div>
+</div>
+<div class="card">
+{% if records %}<ul class="list">
+  {% for r in records %}<li><div class="grow"><b>{{ r.date|fdate }}</b>{% if r.excuse_note %}<div class="meta">{{ r.excuse_note }}</div>{% endif %}</div>{{ status_badge(r.status, current_lang) }}</li>{% endfor %}
+</ul>{% else %}{% call empty('calendar', t('لا يوجد سجل حضور بعد','No attendance yet')) %}{% endcall %}{% endif %}
+</div>
+{% endblock %}

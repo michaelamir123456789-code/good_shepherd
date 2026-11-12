@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf %}
+{% block title %}{{ t('ترقية إلى مسؤول','Make admin') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('admin.servants') }}">{{ icon('chev','i-flip') }} {{ t('الخدام','Servants') }}</a>
+<div class="page-head"><div><h1>{{ t('اجعل الخادم مسؤولاً','Make this servant an admin') }}</h1>
+  <p class="sub">{{ t('سيرى ويدير المراحل التي تختارها فقط، ولن يرى باقي المراحل.','They will see and manage only the grades you choose — never the other grades.') }}</p></div></div>
+<form method="post" novalidate data-once class="stack narrow">{{ csrf() }}
+<div class="card pad">
+  <div class="row mb-1">{{ avatar(servant) }}<div><b>{{ servant.name_ar }}</b><div class="small muted num" dir="ltr">{{ servant.login_label }}</div></div></div>
+  {% if servant.is_grade_admin %}<div class="notice n-info mb-1">{{ icon('info') }}<span>{{ t('هو مسؤول بالفعل. المراحل التي تختارها تُضاف إلى مراحله الحالية، ولا يُحذف منها شيء.','They are already an admin. The grades you pick are ADDED to their current ones — nothing is removed.') }}</span></div>{% endif %}
+  <h3 class="mb-sm">{{ t('المراحل التي سيكون مسؤولاً عنها','Grades they will be responsible for') }}</h3>
+  <div class="check-grid">
+    {% for g in grades %}<label class="check-card"><input type="checkbox" name="grade_ids" value="{{ g.id }}" {{ 'checked' if g.id in selected }}><span>{{ g.display_name(current_lang) }}</span></label>
+    {% else %}<p class="muted small m-0">{{ t('لا توجد مراحل متاحة لك.','No grades available to you.') }}</p>{% endfor %}
+  </div>
+</div>
+<div class="form-actions"><button class="btn btn-primary btn-lg" type="submit">{{ icon('shield') }} {{ t('ترقية','Make admin') }}</button>
+  <a class="btn btn-ghost btn-lg" href="{{ url_for('admin.servants') }}">{{ t('إلغاء','Cancel') }}</a></div>
+</form>
+{% endblock %}

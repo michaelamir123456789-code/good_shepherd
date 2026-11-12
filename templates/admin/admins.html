@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty %}
+{% block title %}{{ t('المسؤولون','Admins') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('المسؤولون','Admins') if not team else t('مسؤولو مرحلتي','Admins of my grade') }}</h1>
+    <p class="sub">{% if team %}{{ t('المسؤولون الذين يشاركونك المرحلة فقط. لإضافة مسؤول جديد: من «الخدام» اضغط «اجعله مسؤولاً».','Only admins who share your grade. To add one: Servants → “Make admin”.') }}{% else %}{{ t('القائد يرى كل شيء. مسؤول المرحلة يرى ويدير المراحل المُسنَدة إليه فقط.','The leader sees everything. A grade admin sees and manages only the grades assigned to them.') }}{% endif %}</p></div>
+  <div class="actions">{% if not team %}<a class="btn btn-primary" href="{{ url_for('admin.admin_new') }}">{{ icon('user-plus') }} {{ t('مسؤول جديد','New admin') }}</a>{% endif %}</div>
+</div>
+<div class="stack-sm">
+{% for a in admins %}
+<div class="card pad-sm {{ '' if a.is_active else 'flat' }}">
+  <div class="row wrap">
+    {{ avatar(a) }}
+    <div class="grow">
+      <b>{{ a.display_name(current_lang) }}</b>
+      {% if a.id == current_user.id %}<span class="badge b-info">{{ t('أنت','You') }}</span>{% endif %}
+      {% if a.is_admin %}<span class="badge b-gold">{{ icon('shield') }} {{ t('قائد — كل الصلاحيات','Leader — full access') }}</span>
+      {% else %}<span class="badge b-brand">{{ t('مسؤول مرحلة','Grade admin') }}</span>{% endif %}
+      {% if not a.is_active %}<span class="badge b-warn">{{ t('معطّل','Disabled') }}</span>{% endif %}
+      {% if a.is_locked_out %}<span class="badge b-bad">{{ icon('lock') }} {{ t('مقفول','Locked') }}</span>{% endif %}
+      {% if a.must_change_password %}<span class="badge b-info">{{ t('لم يغيّر كلمة المرور','Password not changed') }}</span>{% endif %}
+      <div class="meta small muted num" dir="ltr">{{ a.login_label }}</div>
+      {% if a.is_grade_admin %}
+      <div class="row wrap gap-sm mt-sm"><span class="xs muted">{{ t('مسؤول عن','Admin of') }}:</span>
+        {% for g in a.managed_grades if not team or g.id in my_grade_ids %}<span class="badge b-brand">{{ g.display_name(current_lang) }}</span>
+        {% else %}<span class="xs muted">{{ t('لا توجد مراحل مُسنَدة','No grades assigned') }}</span>{% endfor %}
+      </div>{% endif %}
+      {% if a.classes %}<div class="row wrap gap-sm mt-sm"><span class="xs muted">{{ t('ويخدم أيضاً في','Also serves in') }}:</span>
+        {% for c in a.classes if not team or c.grade_id in my_grade_ids %}<span class="badge">{{ c.display_name(current_lang) }}</span>{% endfor %}</div>{% endif %}
+      <div class="xs muted mt-sm">{{ t('آخر دخول','Last sign-in') }}: {{ a.last_login_at|ftime if a.last_login_at else '—' }}</div>
+    </div>
+    <div class="row wrap gap-sm">
+      {% if not team %}
+      {% if a.is_locked_out %}<form method="post" class="inline" action="{{ url_for('admin.admin_unlock', admin_id=a.id) }}">{{ csrf() }}<button class="btn btn-soft btn-sm" type="submit">{{ icon('unlock') }} {{ t('فتح','Unlock') }}</button></form>{% endif %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.admin_edit', admin_id=a.id) }}">{{ icon('edit') }} {{ t('تعديل','Edit') }}</a>
+      {% endif %}
+      {% if a.is_grade_admin and a.id != current_user.id %}
+      <form method="post" class="inline" action="{{ url_for('admin.admin_demote', admin_id=a.id) }}" data-confirm="{{ t('إلغاء صلاحيات المسؤول؟ سيعود خادماً عادياً.','Remove admin rights? They go back to being a servant.') }}">{{ csrf() }}
+        <button class="btn btn-ghost btn-sm" type="submit">{{ t('إلغاء المسؤولية','Remove admin rights') }}</button></form>
+      {% endif %}
+      {% if not team and a.id != current_user.id %}
+      <form method="post" class="inline" action="{{ url_for('admin.admin_toggle', admin_id=a.id) }}" data-confirm="{{ t('تأكيد تغيير حالة الحساب؟','Change this account status?') }}">{{ csrf() }}
+        <button class="btn btn-sm {{ 'btn-danger-soft' if a.is_active else 'btn-soft' }}" type="submit">{{ t('تعطيل','Disable') if a.is_active else t('تفعيل','Enable') }}</button></form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

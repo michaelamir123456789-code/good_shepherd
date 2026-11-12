@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf %}
+{% block title %}{{ t('الفصل مشغول','Class in use') }}{% endblock %}
+{% block content %}
+<div class="error-box">
+  <div class="empty"><div class="ico">{{ icon('lock','i-lg') }}</div></div>
+  <h1 class="mb-sm">{{ t('هذا الفصل يُسجَّل الآن','This class is being recorded') }}</h1>
+  <p class="muted">
+    {% if locked_by %}<b>{{ locked_by.display_name(current_lang) }}</b> {{ t('يسجّل حضور','is taking attendance for') }} {{ klass.display_name(current_lang) }}.{% endif %}
+    {{ t('ستنفتح الصفحة تلقائياً بعد انتهاء الجلسة، أو أعد المحاولة بعد قليل.','The lock frees itself after') }} {{ lock_minutes }} {{ t('دقيقة من آخر نشاط.','minutes of inactivity.') }}
+  </p>
+  <div class="row justify-center wrap mt-1">
+    <a class="btn btn-primary" href="{{ url_for('attendance.take', class_id=klass.id, date=target_date.isoformat()) }}">{{ icon('restore') }} {{ t('إعادة المحاولة','Try again') }}</a>
+    <a class="btn btn-ghost" href="{{ url_for('dashboard.home') }}">{{ t('الرئيسية','Home') }}</a>
+    {% if current_user.is_manager %}
+    <form method="post" action="{{ url_for('attendance.force_takeover', class_id=klass.id) }}" data-confirm="{{ t('الاستيلاء سيُخرج الخادم الآخر. متابعة؟','This will kick the other servant out. Continue?') }}">
+      {{ csrf() }}<input type="hidden" name="date" value="{{ target_date.isoformat() }}">
+      <button class="btn btn-danger-soft" type="submit">{{ icon('unlock') }} {{ t('استيلاء (قائد)','Take over (leader)') }}</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

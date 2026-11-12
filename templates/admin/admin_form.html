@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}{{ t('مسؤول','Admin') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('admin.admins') }}">{{ icon('chev','i-flip') }} {{ t('المسؤولون','Admins') }}</a>
+<div class="page-head"><h1>{{ t('مسؤول جديد','New admin') if mode=='new' else t('تعديل المسؤول','Edit admin') }}</h1></div>
+<form method="post" novalidate data-once class="stack narrow-lg">{{ csrf() }}
+<div class="card pad">
+  <div class="form-grid">
+    {{ field('name_ar', t('الاسم','Name'), form.get('name_ar', target.name_ar if target else ''), required=True, maxlength=120, full=True) }}
+    {{ field('username', t('اسم المستخدم','Username'), form.get('username', target.username or '' if target else ''), required=(mode=='new'), ltr=True, maxlength=30, help=t('للدخول — إنجليزي بدون مسافات','For signing in — English, no spaces')) }}
+    {{ field('phone', t('رقم الهاتف','Phone number'), form.get('phone', target.phone or '' if target else ''), type='tel', ltr=True, maxlength=20, help=t('يمكن الدخول به أيضاً','Can be used to sign in too')) }}
+    {{ field('email', t('البريد الإلكتروني (اختياري)','E-mail (optional)'), form.get('email', target.display_email if target else ''), type='email', ltr=True, maxlength=120, full=True) }}
+  </div>
+</div>
+
+<div class="card pad">
+  <h3 class="mb-sm">{{ icon('school') }} {{ t('يخدم أيضاً في فصول (اختياري)','Also serves in these classes (optional)') }}</h3>
+  <p class="help">{{ t('كل مسؤول هو خادم أيضاً: يستطيع أن يكون مسؤولاً عن فصل ويسجّل حضوره.','Every admin is a servant too: they can have a class of their own and take its attendance.') }}</p>
+  <input type="hidden" name="classes_posted" value="1">
+  <div class="check-grid">
+    {% for c in all_classes %}<label class="check-card"><input type="checkbox" name="class_ids" value="{{ c.id }}" {{ 'checked' if c.id in selected_classes }}><span>{{ c.grade.display_name(current_lang) }} — {{ c.display_name(current_lang) }}</span></label>
+    {% else %}<p class="muted small m-0">{{ t('لا توجد فصول بعد.','No classes yet.') }}</p>{% endfor %}
+  </div>
+</div>
+
+{% if not is_self %}
+<div class="card pad">
+  <h3 class="mb-sm">{{ icon('shield') }} {{ t('نوع المسؤول','Admin type') }}</h3>
+  {% set typ = form.get('admin_type', 'full' if target and target.is_admin else 'grade') %}
+  <div class="check-grid mb-1">
+    <label class="check-card"><input type="radio" name="admin_type" value="grade" {{ 'checked' if typ != 'full' }}><span>{{ t('مسؤول مرحلة — يرى ويدير مراحله فقط','Grade admin — sees & manages only their grades') }}</span></label>
+    <label class="check-card"><input type="radio" name="admin_type" value="full" {{ 'checked' if typ == 'full' }}><span>{{ t('قائد — كل الصلاحيات (الإعدادات، المسؤولون، كل المراحل)','Leader — full access (settings, admins, all grades)') }}</span></label>
+  </div>
+  <h3 class="mb-sm">{{ t('المراحل المسؤول عنها','Responsible for these grades') }}</h3>
+  <p class="help">{{ t('مطلوبة لمسؤول المرحلة. تُتجاهل للقائد.','Required for a grade admin. Ignored for a leader.') }}</p>
+  <div class="check-grid">
+    {% for g in all_grades %}
+    <label class="check-card"><input type="checkbox" name="grade_ids" value="{{ g.id }}" {{ 'checked' if g.id in selected }}><span>{{ g.display_name(current_lang) }}</span></label>
+    {% else %}<p class="muted small m-0">{{ t('أضف مراحل أولاً.','Add grades first.') }}</p>{% endfor %}
+  </div>
+</div>
+
+<div class="card pad">
+  <h3 class="mb-sm">{{ icon('key') }} {{ t('كلمة المرور','Password') }}</h3>
+  <p class="small muted">{{ t('كلمة مرور مؤقتة — سيُطلب منه تغييرها عند أول دخول.','A temporary password — they must change it at first sign-in.') }}
+    {% if mode == 'edit' %}{{ t('اتركها فارغة للإبقاء على الحالية.','Leave empty to keep the current one.') }}{% endif %}</p>
+  <div class="field">
+    <div class="row">
+      <div class="input-group grow">
+        <input class="input ltr" id="pw" name="{{ 'password' if mode == 'new' else 'new_password' }}" type="password" {{ 'required' if mode=='new' }} autocomplete="new-password" dir="ltr" maxlength="128" data-pw-rules="#rules">
+        <button type="button" class="btn btn-ghost btn-icon btn-sm toggle" data-toggle-password="#pw" aria-label="{{ t('إظهار','Show') }}"><span class="eye-on">{{ icon('eye') }}</span><span class="eye-off hidden">{{ icon('eye-off') }}</span></button>
+      </div>
+      <button type="button" class="btn btn-soft" data-generate-password="#pw">{{ icon('wand') }} {{ t('توليد','Generate') }}</button>
+    </div>
+    <ul class="pw-rules" id="rules">
+      <li data-rule="length">{{ t('8 أحرف على الأقل','8+ characters') }}</li><li data-rule="upper">A-Z</li><li data-rule="lower">a-z</li>
+      <li data-rule="digit">{{ t('رقم','Number') }}</li><li data-rule="special">{{ t('رمز خاص','Symbol') }}</li><li data-rule="nospace">{{ t('بدون مسافات','No spaces') }}</li>
+    </ul>
+  </div>
+  {% if mode == 'edit' %}<label class="check"><input type="checkbox" name="is_active" value="1" {{ 'checked' if target.is_active }}> {{ t('الحساب مفعّل','Account enabled') }}</label>{% endif %}
+</div>
+{% else %}
+<div class="notice n-info">{{ icon('info') }}<span>{{ t('هذا حسابك. لتغيير كلمة المرور استخدم "تغيير كلمة المرور". لا يمكنك تغيير نوع حسابك أو تعطيله.','This is your own account. Use "Change password" for your password. You can’t change your own type or disable yourself.') }}</span></div>
+{% endif %}
+
+<div class="form-actions"><button class="btn btn-primary btn-lg" type="submit">{{ icon('check') }} {{ t('حفظ','Save') }}</button>
+  <a class="btn btn-ghost btn-lg" href="{{ url_for('admin.admins') }}">{{ t('إلغاء','Cancel') }}</a></div>
+</form>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty %}
+{% block title %}{{ t('الافتقاد','Visitation') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('الافتقاد','Visitation') }}</h1>
+    <p class="sub">{{ t('الأولوية للأطفال المتغيّبين، ثم من لم يُفتقد منذ','Absent kids first, then anyone not visited for') }} {{ days }} {{ t('يوماً','days') }}</p></div>
+  <div class="actions">
+    <a class="btn btn-soft" href="{{ url_for('visitation.history_pdf', class_id=selected_class or None) }}">{{ icon('file') }} {{ t('تقرير الافتقاد PDF','Visitation report PDF') }}</a>
+    <a class="btn btn-ghost" href="{{ url_for('visitation.print_list', area=selected_area or None) }}">{{ icon('printer') }} {{ t('قائمة للطباعة','Print list') }}</a>
+  </div>
+</div>
+{% set active = 'plan' %}{% include 'visitation/_tabs.html' %}
+
+<form method="get" class="filter-bar">
+  {% if classes|length > 1 %}
+  <select class="select" name="class_id" data-autosubmit aria-label="{{ t('الفصل','Class') }}">
+    <option value="">{{ t('كل الفصول','All classes') }}</option>
+    {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == selected_class }}>{{ c.grade.display_name(current_lang) }} — {{ c.display_name(current_lang) }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <select class="select" name="area" data-autosubmit aria-label="{{ t('المنطقة','Area') }}">
+    <option value="">{{ t('كل المناطق','All areas') }}</option>
+    {% for a in areas %}<option value="{{ a }}" {{ 'selected' if a == selected_area }}>{{ a }}</option>{% endfor %}
+  </select>
+  <span class="muted small">{{ rows|length }} {{ t('طفل','kids') }}{% if alerts %} · <b class="num">{{ alerts }}</b> {{ t('بحاجة عاجلة','urgent') }}{% endif %}</span>
+</form>
+
+{% if rows %}
+<div class="stack-sm">
+{% for r in rows %}{% set kid = r.kid %}
+<div class="card pad-sm {{ 'alertc' if r.alert }}">
+  <div class="row">
+    {{ avatar(kid) }}
+    <div class="grow">
+      <a class="strong" href="{{ url_for('profiles.view', kid_id=kid.id) }}">{{ kid.display_name(current_lang) }}</a>
+      <div class="meta small muted">{{ kid.klass.display_name(current_lang) if kid.klass }}{% if kid.area %} · {{ icon('pin') }} {{ kid.area }}{% endif %}</div>
+      {% if kid.address %}<div class="small">{{ kid.address }}</div>{% endif %}
+      <div class="row wrap gap-sm mt-sm">
+        {% if r.alert %}<span class="badge b-bad">{{ icon('alert') }} {{ t('غاب','Absent') }} {{ r.streak }} {{ t('متتالية','in a row') }}</span>{% endif %}
+        {% if r.never %}<span class="badge b-warn">{{ t('لم يُفتقد بعد','Never visited') }}</span>
+        {% else %}<span class="badge">{{ t('آخر افتقاد','Last visit') }}: {{ r.last_visit|fdate(weekday=False) }}{% if r.last_by %} · {{ r.last_by.display_name(current_lang) }}{% endif %}</span>{% endif %}
+      </div>
+      {% if r.last_note %}<p class="small muted pre-wrap mb-0 mt-sm">“{{ r.last_note|truncate(140) }}”</p>{% endif %}
+    </div>
+    {% if kid.primary_phone %}<a class="btn btn-soft btn-icon" href="tel:{{ kid.primary_phone }}" aria-label="{{ t('اتصال','Call') }}">{{ icon('phone') }}</a>{% endif %}
+  </div>
+  <details class="mt-sm">
+    <summary class="btn btn-ghost btn-sm">{{ icon('check') }} {{ t('تسجيل افتقاد','Log a visit') }}</summary>
+    <form method="post" action="{{ url_for('visitation.log_visit', kid_id=kid.id) }}" class="mt-sm" data-once>
+      {{ csrf() }}<input type="hidden" name="return_area" value="{{ selected_area }}"><input type="hidden" name="return_class" value="{{ selected_class or '' }}">
+      <div class="form-grid">
+        <div class="field"><label>{{ t('نوع الافتقاد','Type') }}</label>
+          <select class="select" name="visit_type">
+            <option value="home">{{ t('زيارة منزلية','Home visit') }}</option>
+            <option value="phone">{{ t('اتصال هاتفي','Phone call') }}</option>
+            <option value="church">{{ t('في الكنيسة','At church') }}</option>
+          </select></div>
+        <div class="field"><label>{{ t('تاريخ الافتقاد','Date of the visit') }}</label>
+          <input class="input ltr" type="date" name="visit_date" value="{{ today.isoformat() }}" max="{{ today.isoformat() }}" dir="ltr"></div>
+        <div class="field full"><label>{{ t('ماذا حدث؟ (ملاحظات)','What happened? (notes)') }}</label>
+          <textarea class="textarea" name="notes" maxlength="2000" placeholder="{{ t('مثال: قابلنا الأم، الطفل كان مريضاً، سيحضر الجمعة القادمة','e.g. We met the mother, the child was ill, he will come next Friday') }}"></textarea></div>
+      </div>
+      <button class="btn btn-primary btn-sm" type="submit">{{ t('حفظ','Save') }}</button>
+    </form>
+  </details>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card">{% call empty('heart', t('الجميع مُفتقَد','Everyone has been visited'), t('لا يوجد أطفال ينتظرون افتقاداً حالياً.','No kids are waiting for a visit.')) %}{% endcall %}</div>
+{% endif %}
+{% endblock %}

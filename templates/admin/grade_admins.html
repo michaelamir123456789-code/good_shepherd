@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty %}
+{% block title %}{{ t('مسؤولو المرحلة','Admins of the grade') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('admin.grades') }}">{{ icon('chev','i-flip') }} {{ t('المراحل والفصول','Grades & classes') }}</a>
+<div class="page-head"><div><h1>{{ t('مسؤولو','Admins of') }} {{ grade.display_name(current_lang) }}</h1>
+  <p class="sub">{{ t('المسؤول يرى ويدير هذه المرحلة فقط، ويمكنه أن يجعل خداماً من مرحلته مسؤولين مثله. الشخص الواحد يمكن أن يكون مسؤولاً عن أكثر من مرحلة.','An admin sees and manages this grade only, and can make servants of the grade admins like them. One person can be the admin of several grades.') }}</p></div></div>
+
+<div class="card mb-1">
+  <div class="card-head"><h3>{{ icon('shield') }} {{ t('المسؤولون الحاليون','Current admins') }}</h3><span class="badge b-gold">{{ admins|length }}</span></div>
+  {% if admins %}
+  <ul class="list">
+    {% for a in admins %}
+    <li>{{ avatar(a) }}
+      <div class="grow"><b>{{ a.display_name(current_lang) }}</b>
+        {% if a.id == current_user.id %}<span class="badge b-info">{{ t('أنت','You') }}</span>{% endif %}
+        {% if not a.is_active %}<span class="badge b-warn">{{ t('معطّل','Disabled') }}</span>{% endif %}
+        <div class="meta small num" dir="ltr">{{ a.login_label }}</div>
+        <div class="row wrap gap-sm mt-sm">
+          {% if current_user.is_admin %}{% set others = a.managed_grades|rejectattr('id', 'equalto', grade.id)|list %}
+            {% if others %}<span class="xs muted">{{ t('ومسؤول أيضاً عن','Also admin of') }}:</span>{% for g in others %}<span class="badge b-brand">{{ g.display_name(current_lang) }}</span>{% endfor %}{% endif %}{% endif %}
+          {% set here = a.classes|selectattr('grade_id', 'equalto', grade.id)|list %}
+          {% if here %}<span class="xs muted">{{ t('يخدم في','Serves in') }}:</span>{% for c in here %}<span class="badge">{{ c.display_name(current_lang) }}</span>{% endfor %}{% endif %}
+        </div></div>
+      {% if a.id != current_user.id %}
+      <form method="post" class="inline" action="{{ url_for('admin.grade_admin_remove', grade_id=grade.id, user_id=a.id) }}" data-confirm="{{ t('إزالته من مسؤولية هذه المرحلة؟ (يبقى خادماً ومسؤولاً عن مراحله الأخرى إن وُجدت)','Remove him from this grade? (He stays a servant, and an admin of any other grades.)') }}">{{ csrf() }}
+        <button class="btn btn-ghost btn-sm" type="submit">{{ icon('x') }} {{ t('إزالة من المرحلة','Remove from grade') }}</button></form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {% call empty('shield', t('لا يوجد مسؤول لهذه المرحلة بعد','This grade has no admin yet'), t('اختر خادماً من القائمة بالأسفل ليكون مسؤولاً عنها.','Pick a servant from the list below to be its admin.')) %}{% endcall %}
+  {% endif %}
+</div>
+
+<div class="card pad">
+  <h3 class="mb-sm">{{ icon('user-plus') }} {{ t('إضافة مسؤول لهذه المرحلة','Add an admin to this grade') }}</h3>
+  {% if in_grade or others %}
+  <form method="post" action="{{ url_for('admin.grade_admin_add', grade_id=grade.id) }}" data-once>{{ csrf() }}
+    <div class="field"><select class="select" name="user_id" required aria-label="{{ t('الخادم','Servant') }}">
+      <option value="">{{ t('— اختر الخادم —','— Choose the servant —') }}</option>
+      {% if in_grade %}<optgroup label="{{ t('يخدمون في هذه المرحلة','Serving in this grade') }}">
+        {% for u in in_grade %}<option value="{{ u.id }}">{{ u.display_name(current_lang) }}{% if u.is_grade_admin %} ({{ t('مسؤول','admin') }}){% endif %} — {{ u.login_label }}</option>{% endfor %}</optgroup>{% endif %}
+      {% if others %}<optgroup label="{{ t('خدام من مراحل أخرى','Servants from other grades') }}">
+        {% for u in others %}<option value="{{ u.id }}">{{ u.display_name(current_lang) }}{% if u.is_grade_admin %} ({{ t('مسؤول','admin') }}){% endif %} — {{ u.login_label }}</option>{% endfor %}</optgroup>{% endif %}
+    </select></div>
+    <button class="btn btn-primary" type="submit">{{ icon('shield') }} {{ t('اجعله مسؤولاً عن هذه المرحلة','Make admin of this grade') }}</button>
+  </form>
+  {% else %}
+  <p class="muted small m-0">{{ t('لا يوجد خدام متاحون. أضف خداماً إلى فصول هذه المرحلة أولاً (أو اقبل طلبات الانضمام).','No servants available. Add servants to this grade’s classes first (or approve join requests).') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

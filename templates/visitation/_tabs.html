@@ -1,0 +1,6 @@
+{# Shared header for the two visitation tabs. Needs: active ('plan'|'history'), classes, selected_class #}
+{% from '_macros.html' import icon %}
+<div class="tabs mb-1">
+  <a class="{{ 'on' if active == 'plan' }}" href="{{ url_for('visitation.plan', class_id=selected_class or None) }}">{{ icon('alert') }} {{ t('المطلوب افتقادهم','Needs a visit') }}</a>
+  <a class="{{ 'on' if active == 'history' }}" href="{{ url_for('visitation.history', class_id=selected_class or None) }}">{{ icon('scroll') }} {{ t('سجل الافتقاد (ما تم)','Visit history (done)') }}</a>
+</div>

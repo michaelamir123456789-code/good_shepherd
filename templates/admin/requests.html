@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty %}
+{% block title %}{{ t('طلبات الانضمام','Account requests') }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ t('طلبات الانضمام','Account requests') }}</h1>
+  <p class="sub">{{ t('خدام طلبوا إنشاء حساب. اختر الفصل ثم وافق، أو ارفض الطلب.','Servants who asked for an account. Pick their class, then approve — or decline.') }}</p></div></div>
+{% if reqs %}
+<div class="stack">
+{% for r in reqs %}
+{% set g = grades.get(r.requested_grade_id) %}
+<div class="card pad">
+  <div class="row wrap">
+    {{ avatar(r) }}
+    <div class="grow">
+      <b>{{ r.name_ar }}</b>
+      {% if r.requested_admin_id == current_user.id %}<span class="badge b-gold">{{ t('موجّه إليك','Sent to you') }}</span>
+      {% elif r.requested_admin_id and names.get(r.requested_admin_id) %}<span class="badge">{{ t('موجّه إلى','Sent to') }} {{ names[r.requested_admin_id].display_name(current_lang) }}</span>{% endif %}
+      <div class="meta small muted num" dir="ltr">@{{ r.username }} · {{ r.phone }}</div>
+      <div class="row wrap gap-sm mt-sm">
+        {% if g %}<span class="badge b-brand">{{ icon('layers') }} {{ g.display_name(current_lang) }}</span>{% endif %}
+        <span class="xs muted">{{ r.requested_at|ftime }}</span>
+      </div>
+    </div>
+    {% if r.phone %}<a class="btn btn-ghost btn-sm" href="tel:{{ r.phone }}">{{ icon('phone') }} {{ t('اتصل للتأكد','Call to verify') }}</a>{% endif %}
+  </div>
+
+  {% set options = classes_by_grade.get(r.requested_grade_id, []) %}
+  <form method="post" action="{{ url_for('admin.request_approve', user_id=r.id) }}" class="mt-1" data-once>{{ csrf() }}
+    {% if options %}
+    <span class="label">{{ t('الفصل (يمكن اختيار أكثر من فصل)','Class (you can pick more than one)') }}</span>
+    <div class="check-grid mb-1 mt-sm">
+      {% for c in options %}<label class="check-card"><input type="checkbox" name="class_ids" value="{{ c.id }}"><span>{{ c.display_name(current_lang) }}</span></label>{% endfor %}
+    </div>
+    <div class="row wrap">
+      <button class="btn btn-primary" type="submit">{{ icon('check') }} {{ t('موافقة','Approve') }}</button>
+      <button class="btn btn-danger-soft" type="submit" formaction="{{ url_for('admin.request_reject', user_id=r.id) }}" formnovalidate data-confirm="{{ t('رفض هذا الطلب؟','Decline this request?') }}">{{ icon('x') }} {{ t('رفض','Decline') }}</button>
+    </div>
+    {% else %}
+    <div class="notice n-warn mb-1">{{ icon('alert') }}<span>{{ t('لا توجد فصول في هذه المرحلة بعد. أضف فصلاً أولاً لتتمكن من الموافقة.','This grade has no classes yet. Add a class first so you can approve.') }}</span></div>
+    <button class="btn btn-danger-soft" type="submit" formaction="{{ url_for('admin.request_reject', user_id=r.id) }}" data-confirm="{{ t('رفض هذا الطلب؟','Decline this request?') }}">{{ icon('x') }} {{ t('رفض','Decline') }}</button>
+    {% endif %}
+  </form>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card">{% call empty('check', t('لا توجد طلبات','No requests'), t('عندما يطلب خادم حساباً ستجده هنا.','When a servant asks for an account it will appear here.')) %}{% endcall %}</div>
+{% endif %}
+{% endblock %}

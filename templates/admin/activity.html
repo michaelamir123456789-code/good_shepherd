@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, empty, pager %}
+{% block title %}{{ t('سجل النشاط','Activity log') }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ t('سجل النشاط','Activity log') }}</h1><p class="sub">{{ t('من فعل ماذا ومتى — للمراجعة الأمنية.','Who did what and when — for security review.') }}</p></div></div>
+<form method="get" class="filter-bar">
+  <select class="select" name="action" data-autosubmit aria-label="{{ t('نوع الحدث','Event') }}">
+    <option value="">{{ t('كل الأحداث','All events') }}</option>
+    {% for a in actions %}<option value="{{ a }}" {{ 'selected' if a == selected }}>{{ a }}</option>{% endfor %}
+  </select>
+</form>
+{% if logs %}
+<div class="card"><div class="table-wrap"><table class="table table-cards">
+  <thead><tr><th>{{ t('الوقت','Time') }}</th><th>{{ t('المستخدم','User') }}</th><th>{{ t('الحدث','Event') }}</th><th>{{ t('الهدف','Target') }}</th><th>IP</th></tr></thead>
+  <tbody>{% for l in logs %}
+  <tr>
+    <td class="main num small nowrap">{{ l.created_at|ftime }}</td>
+    <td data-label="{{ t('المستخدم','User') }}">{{ l.user.display_name(current_lang) if l.user else '—' }}</td>
+    <td data-label="{{ t('الحدث','Event') }}"><span class="badge {{ 'b-bad' if 'fail' in l.action or 'lock' in l.action else 'b-brand' }}">{{ l.action }}</span></td>
+    <td data-label="{{ t('الهدف','Target') }}" class="muted small">{{ l.target or '—' }}</td>
+    <td data-label="IP" class="muted small num" dir="ltr">{{ l.ip_address or '—' }}</td>
+  </tr>{% endfor %}</tbody></table></div></div>
+{{ pager(pagination, 'admin.activity', action=selected or None) }}
+{% else %}<div class="card">{% call empty('scroll', t('لا توجد أحداث','No events')) %}{% endcall %}</div>{% endif %}
+{% endblock %}

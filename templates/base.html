@@ -1,0 +1,169 @@
+{% from '_macros.html' import icon, csrf %}
+<!DOCTYPE html>
+<html lang="{{ current_lang }}" dir="{{ dir }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="theme-color" content="#226a41">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}{% endblock %}{% if self.title()|trim %} · {% endif %}{{ brand }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% macro nav_link(endpoint, ic, label, match) %}
+  <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith(match or endpoint) }}" href="{{ url_for(endpoint) }}">{{ icon(ic) }} {{ label }}</a>
+{% endmacro %}
+
+{% if current_user.is_authenticated and not current_user.must_change_password %}
+<header class="site-header no-print">
+  <div class="container inner">
+    <a class="brand" href="{{ url_for('dashboard.home') }}">
+      <span class="brand-mark">{{ icon('crook') }}</span>
+      <span class="brand-name">{{ brand }}</span>
+    </a>
+
+    <nav class="main-nav" aria-label="main">
+      {{ nav_link('dashboard.home', 'home', t('الرئيسية','Home'), 'dashboard.') }}
+      {{ nav_link('admin.kids', 'users', t('الأطفال','Kids'), 'admin.kid') }}
+      {% if current_user.is_manager %}
+        <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.request') }}" href="{{ url_for('admin.requests_list') }}">{{ icon('user-plus') }} {{ t('الطلبات','Requests') }}{% if pending_requests %}<span class="count-badge">{{ pending_requests }}</span>{% endif %}</a>
+      {% endif %}
+      {{ nav_link('reports.hub', 'chart', t('التقارير','Reports'), 'reports.') }}
+      {{ nav_link('visitation.plan', 'heart', t('الافتقاد','Visitation'), 'visitation.') }}
+      {% if current_user.is_manager %}
+      <details class="menu">
+        <summary class="nav-link {{ 'active' if request.endpoint and (request.endpoint.startswith('admin.grade') or request.endpoint.startswith('admin.class') or request.endpoint.startswith('admin.servant') or request.endpoint.startswith('admin.admin') or request.endpoint in ('admin.settings','admin.activity')) }}">{{ icon('sliders') }} {{ t('الإدارة','Manage') }}</summary>
+        <div class="menu-panel">
+          <a class="menu-item" href="{{ url_for('admin.grades') }}">{{ icon('layers') }} {{ t('المراحل والفصول','Grades & classes') }}</a>
+          <a class="menu-item" href="{{ url_for('admin.servants') }}">{{ icon('user') }} {{ t('الخدام','Servants') }}</a>
+          <a class="menu-item" href="{{ url_for('admin.kids_import') }}">{{ icon('upload') }} {{ t('استيراد أطفال','Import kids') }}</a>
+          {% if current_user.is_grade_admin %}
+          <a class="menu-item" href="{{ url_for('admin.team') }}">{{ icon('shield') }} {{ t('مسؤولو مرحلتي','Admins of my grade') }}</a>
+          {% endif %}
+          {% if current_user.is_admin %}
+          <div class="menu-sep"></div>
+          <a class="menu-item" href="{{ url_for('admin.admins') }}">{{ icon('shield') }} {{ t('المسؤولون','Admins') }}</a>
+          <a class="menu-item" href="{{ url_for('admin.settings') }}">{{ icon('sliders') }} {{ t('الإعدادات','Settings') }}</a>
+          <a class="menu-item" href="{{ url_for('admin.activity') }}">{{ icon('scroll') }} {{ t('سجل النشاط','Activity log') }}</a>
+          {% endif %}
+        </div>
+      </details>
+      {% endif %}
+    </nav>
+
+    <div class="header-tools">
+      <div class="lang-switch" aria-label="language">
+        <a href="{{ url_for('auth.set_language', lang='ar') }}" class="{{ 'on' if current_lang=='ar' }}">ع</a>
+        <a href="{{ url_for('auth.set_language', lang='en') }}" class="{{ 'on' if current_lang=='en' }}">EN</a>
+      </div>
+      <details class="menu">
+        <summary class="user-chip">
+          <span class="uname small strong">{{ current_user.display_name(current_lang).split()[0] }}</span>
+          <span class="avatar sm av-{{ current_user.id % 6 }}">{{ current_user.initials }}</span>
+        </summary>
+        <div class="menu-panel">
+          <div class="head">
+            <div class="strong">{{ current_user.display_name(current_lang) }}</div>
+            <div class="xs muted">{{ t('قائد الخدمة','Service leader') if current_user.is_admin else (t('مسؤول مرحلة','Grade admin') if current_user.is_grade_admin else t('خادم','Servant')) }}</div>
+          </div>
+          <a class="menu-item" href="{{ url_for('auth.account') }}">{{ icon('user') }} {{ t('حسابي','My account') }}</a>
+          <a class="menu-item" href="{{ url_for('auth.change_password') }}">{{ icon('key') }} {{ t('تغيير كلمة المرور','Change password') }}</a>
+          <form method="post" action="{{ url_for('auth.logout') }}">{{ csrf() }}
+            <button class="menu-item danger" type="submit">{{ icon('logout') }} {{ t('تسجيل الخروج','Sign out') }}</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+{% endif %}
+
+{# ---- flash messages ---- #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="toasts no-print" role="status" aria-live="polite">
+  {% for cat, m in messages %}
+  {% set c = cat if cat in ['success','danger','warning','info'] else 'info' %}
+  <div class="toast t-{{ c }}">
+    {{ icon({'success':'check','danger':'alert','warning':'alert','info':'info'}[c]) }}
+    <span>{{ m }}</span>
+    <button type="button" class="x" aria-label="{{ t('إغلاق','Close') }}">{{ icon('x') }}</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% block outer %}
+<main class="page container">
+  {% block content %}{% endblock %}
+</main>
+{% endblock %}
+
+<div class="backup-wrap no-print">
+  <aside class="backup-note" role="note">
+    {{ icon('alert') }}
+    <p>{{ t('تنبيه للنسخ الاحتياطي: تحسّباً لحدوث أي عطل في النظام، احرص على تنزيل بياناتك بصيغة PDF، أو حفظها في مكان آخر خارج النظام، حتى تكون لديك نسخة احتياطية دائماً.',
+            'Backup reminder: in case anything happens to the system, please download your data as PDF files, or keep a copy somewhere outside the system, so that you always have a backup.') }}</p>
+  </aside>
+</div>
+
+{% if current_user.is_authenticated and not current_user.must_change_password %}
+<footer class="site-footer no-print">
+  <div class="verse">{{ verse }}<cite>{{ verse_ref }}</cite></div>
+</footer>
+
+{# ---- mobile bottom bar ---- #}
+<nav class="bottom-nav no-print" aria-label="main">
+  {% macro bn(endpoint, ic, label, match) %}
+  <a class="bn-item {{ 'active' if request.endpoint and request.endpoint.startswith(match) }}" href="{{ url_for(endpoint) }}">{{ icon(ic) }}<span>{{ label }}</span></a>
+  {% endmacro %}
+  {{ bn('dashboard.home','home',t('الرئيسية','Home'),'dashboard.') }}
+  {{ bn('admin.kids','users',t('الأطفال','Kids'),'admin.kid') }}
+  {{ bn('reports.hub','chart',t('التقارير','Reports'),'reports.') }}
+  {{ bn('visitation.plan','heart',t('الافتقاد','Visits'),'visitation.') }}
+  <button type="button" class="bn-item" data-sheet-open>{{ icon('menu') }}<span>{{ t('المزيد','More') }}</span></button>
+</nav>
+<div id="sheet-backdrop" class="sheet-backdrop" data-sheet-close></div>
+<div id="more-sheet" class="sheet no-print" role="dialog" aria-label="{{ t('المزيد','More') }}">
+  <div class="grip"></div>
+  <div class="row mb-sm">
+    <span class="avatar av-{{ current_user.id % 6 }}">{{ current_user.initials }}</span>
+    <div><div class="strong">{{ current_user.display_name(current_lang) }}</div>
+    <div class="xs muted num" dir="ltr">{{ current_user.login_label }}</div></div>
+  </div>
+  <div class="menu-sep"></div>
+  {% if current_user.is_manager %}
+    <a class="menu-item" href="{{ url_for('admin.grades') }}">{{ icon('layers') }} {{ t('المراحل والفصول','Grades & classes') }}</a>
+    <a class="menu-item" href="{{ url_for('admin.servants') }}">{{ icon('user') }} {{ t('الخدام','Servants') }}</a>
+    <a class="menu-item" href="{{ url_for('admin.kids_import') }}">{{ icon('upload') }} {{ t('استيراد أطفال','Import kids') }}</a>
+    {% if current_user.is_grade_admin %}
+    <a class="menu-item" href="{{ url_for('admin.team') }}">{{ icon('shield') }} {{ t('مسؤولو مرحلتي','Admins of my grade') }}</a>
+    {% endif %}
+    {% if current_user.is_admin %}
+    <a class="menu-item" href="{{ url_for('admin.admins') }}">{{ icon('shield') }} {{ t('المسؤولون','Admins') }}</a>
+    <a class="menu-item" href="{{ url_for('admin.settings') }}">{{ icon('sliders') }} {{ t('الإعدادات','Settings') }}</a>
+    <a class="menu-item" href="{{ url_for('admin.activity') }}">{{ icon('scroll') }} {{ t('سجل النشاط','Activity log') }}</a>
+    {% endif %}
+    <a class="menu-item" href="{{ url_for('admin.requests_list') }}">{{ icon('user-plus') }} {{ t('طلبات الانضمام','Account requests') }}{% if pending_requests %}<span class="count-badge">{{ pending_requests }}</span>{% endif %}</a>
+    <div class="menu-sep"></div>
+  {% endif %}
+  {% if not current_user.is_manager %}<a class="menu-item" href="{{ url_for('admin.kids_import') }}">{{ icon('upload') }} {{ t('استيراد أطفال من Excel','Import kids from Excel') }}</a>{% endif %}
+  <a class="menu-item" href="{{ url_for('auth.account') }}">{{ icon('user') }} {{ t('حسابي','My account') }}</a>
+  <a class="menu-item" href="{{ url_for('auth.change_password') }}">{{ icon('key') }} {{ t('تغيير كلمة المرور','Change password') }}</a>
+  <div class="lang-switch">
+    <a href="{{ url_for('auth.set_language', lang='ar') }}" class="{{ 'on' if current_lang=='ar' }}">العربية</a>
+    <a href="{{ url_for('auth.set_language', lang='en') }}" class="{{ 'on' if current_lang=='en' }}">English</a>
+  </div>
+  <form method="post" action="{{ url_for('auth.logout') }}">{{ csrf() }}
+    <button class="menu-item danger" type="submit">{{ icon('logout') }} {{ t('تسجيل الخروج','Sign out') }}</button>
+  </form>
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</body>
+</html>

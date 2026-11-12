@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, empty %}
+{% block title %}{{ grade.display_name(current_lang) }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('admin.grades') }}">{{ icon('chev','i-flip') }} {{ t('المراحل','Grades') }}</a>
+<div class="page-head">
+  <div><h1>{{ grade.display_name(current_lang) }}</h1><p class="sub">{{ t('الفصول','Classes') }}</p></div>
+  <div class="actions"><a class="btn btn-primary" href="{{ url_for('admin.class_new', grade_id=grade.id) }}">{{ icon('plus') }} {{ t('فصل جديد','New class') }}</a></div>
+</div>
+{% if classes %}
+<div class="card"><ul class="list">
+  {% for c in classes %}
+  <li>
+    <div class="grow"><b>{{ c.display_name(current_lang) }}</b><div class="meta">{{ kid_counts.get(c.id, 0) }} {{ t('طفل','kids') }}{% if c.age_group %} · {{ c.age_group }}{% endif %}</div></div>
+    <a class="btn btn-soft btn-sm" href="{{ url_for('admin.kids', class_id=c.id) }}">{{ icon('users') }}<span class="hide-sm"> {{ t('الأطفال','Kids') }}</span></a>
+    <a class="btn btn-ghost btn-sm btn-icon" href="{{ url_for('admin.class_edit', class_id=c.id) }}" aria-label="{{ t('تعديل','Edit') }}">{{ icon('edit') }}</a>
+    <form method="post" class="inline" action="{{ url_for('admin.class_delete', class_id=c.id) }}" data-confirm="{{ t('حذف هذا الفصل؟','Delete this class?') }}">{{ csrf() }}
+      <button class="btn btn-danger-soft btn-sm btn-icon" type="submit" aria-label="{{ t('حذف','Delete') }}">{{ icon('trash') }}</button></form>
+  </li>{% endfor %}
+</ul></div>
+{% else %}
+<div class="card">{% call empty('school', t('لا توجد فصول في هذه المرحلة','No classes in this grade')) %}
+<a class="btn btn-primary" href="{{ url_for('admin.class_new', grade_id=grade.id) }}">{{ icon('plus') }} {{ t('فصل جديد','New class') }}</a>{% endcall %}</div>
+{% endif %}
+{% endblock %}

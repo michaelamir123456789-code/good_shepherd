@@ -1,0 +1,27 @@
+{# Pop-up shown once per session on the home screen: kids who missed N weeks in a row (N set by the admin). #}
+{% from '_macros.html' import icon, avatar %}
+{% if alerts %}
+<div class="modal-backdrop" data-alert-modal data-key="{{ att_date }}-{{ alerts_total }}-{{ current_user.id }}">
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="alert-title">
+    <div class="modal-head">
+      <span class="modal-ico">{{ icon('alert') }}</span>
+      <div><h2 id="alert-title">{{ t('أطفال تغيّبوا عدة أسابيع','Kids who missed several weeks') }}</h2>
+        <p class="muted small m-0">{{ alerts_total }} {{ t('طفل يحتاجون اتصالاً أو افتقاداً','kid(s) need a call or a visit') }}</p></div>
+    </div>
+    <ul class="list modal-list">
+      {% for kid, streak in alerts %}
+      <li>
+        {{ avatar(kid, 'sm') }}
+        <div class="grow"><a class="strong" href="{{ url_for('profiles.view', kid_id=kid.id) }}">{{ kid.display_name(current_lang) }}</a>
+          <div class="meta">{{ kid.klass.display_name(current_lang) if kid.klass }} · <b class="num">{{ streak }}</b> {{ t('أسابيع متتالية','weeks in a row') }}</div></div>
+        {% if kid.primary_phone %}<a class="btn btn-soft btn-sm btn-icon" href="tel:{{ kid.primary_phone }}" aria-label="{{ t('اتصال','Call') }}">{{ icon('phone') }}</a>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="row wrap modal-foot">
+      <a class="btn btn-primary" href="{{ url_for('visitation.plan') }}">{{ icon('heart') }} {{ t('خطة الافتقاد','Visitation plan') }}</a>
+      <button class="btn btn-ghost" type="button" data-modal-close>{{ t('إغلاق','Close') }}</button>
+    </div>
+  </div>
+</div>
+{% endif %}

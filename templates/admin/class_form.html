@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field %}
+{% block title %}{{ t('فصل','Class') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('admin.classes', grade_id=grade.id) }}">{{ icon('chev','i-flip') }} {{ grade.display_name(current_lang) }}</a>
+<div class="page-head"><h1>{{ t('فصل جديد','New class') if mode=='new' else t('تعديل الفصل','Edit class') }}</h1></div>
+<div class="card pad narrow">
+<form method="post" novalidate data-once>{{ csrf() }}
+  {{ field('name_ar', t('الاسم بالعربية','Arabic name'), form.get('name_ar', klass.name_ar if klass else ''), required=True, maxlength=120) }}
+  {{ field('name_en', t('الاسم بالإنجليزية (اختياري)','English name (optional)'), form.get('name_en', klass.name_en if klass else ''), ltr=True, maxlength=120) }}
+  {{ field('age_group', t('الفئة العمرية','Age group'), form.get('age_group', klass.age_group if klass else ''), maxlength=50, placeholder='6-8') }}
+  <div class="form-actions"><button class="btn btn-primary" type="submit">{{ icon('check') }} {{ t('حفظ','Save') }}</button>
+    <a class="btn btn-ghost" href="{{ url_for('admin.classes', grade_id=grade.id) }}">{{ t('إلغاء','Cancel') }}</a></div>
+</form></div>
+{% endblock %}

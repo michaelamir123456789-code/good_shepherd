@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty %}
+{% block title %}{{ t('الخدام','Servants') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('الخدام','Servants') }}</h1><p class="sub">{{ t('كل خادم يرى فصوله فقط. المسؤولون أيضاً خدام — يظهرون هنا بشارة «مسؤول».','Each servant only sees their own classes. Admins are servants too — they appear here with an “Admin” badge.') }}</p></div>
+  <div class="actions"><a class="btn btn-primary" href="{{ url_for('admin.servant_new') }}">{{ icon('user-plus') }} {{ t('خادم جديد','New servant') }}</a></div>
+</div>
+{% if servants %}
+<div class="stack-sm">
+{% for s in servants %}
+<div class="card pad-sm {{ '' if s.is_active else 'flat' }}">
+  <div class="row wrap">
+    {{ avatar(s) }}
+    <div class="grow">
+      <b>{{ s.display_name(current_lang) }}</b>
+      {% if s.is_grade_admin %}<span class="badge b-gold">{{ icon('shield') }} {{ t('مسؤول مرحلة','Grade admin') }}</span>{% endif %}
+      {% if not s.is_active %}<span class="badge b-warn">{{ t('معطّل','Disabled') }}</span>{% endif %}
+      {% if s.is_locked_out %}<span class="badge b-bad">{{ icon('lock') }} {{ t('مقفول','Locked') }}</span>{% endif %}
+      {% if s.must_change_password %}<span class="badge b-info">{{ t('لم يغيّر كلمة المرور','Password not changed') }}</span>{% endif %}
+      <div class="meta small muted num" dir="ltr">{{ s.login_label }}</div>
+      {% if s.is_grade_admin %}
+      <div class="row wrap gap-sm mt-sm"><span class="xs muted">{{ t('مسؤول عن','Admin of') }}:</span>
+        {% for g in s.managed_grades if current_user.is_admin or g.id in my_grade_ids %}<span class="badge b-gold">{{ g.display_name(current_lang) }}</span>{% endfor %}</div>
+      {% endif %}
+      <div class="row wrap gap-sm mt-sm"><span class="xs muted">{{ t('يخدم في','Serves in') }}:</span>
+        {% for c in s.classes %}<span class="badge b-brand">{{ c.display_name(current_lang) }}</span>{% else %}<span class="xs muted">{{ t('بدون فصول','No classes') }}</span>{% endfor %}
+      </div>
+      <div class="xs muted mt-sm">{{ t('آخر دخول','Last sign-in') }}: {{ s.last_login_at|ftime if s.last_login_at else '—' }}</div>
+    </div>
+    <div class="row wrap gap-sm">
+      {% if s.is_locked_out %}<form method="post" class="inline" action="{{ url_for('admin.servant_unlock', servant_id=s.id) }}">{{ csrf() }}<button class="btn btn-soft btn-sm" type="submit">{{ icon('unlock') }} {{ t('فتح','Unlock') }}</button></form>{% endif %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.servant_edit', servant_id=s.id) }}">{{ icon('edit') }} {{ t('تعديل','Edit') }}</a>
+      {% if s.is_active %}<a class="btn btn-soft btn-sm" href="{{ url_for('admin.servant_promote', servant_id=s.id) }}">{{ icon('shield') }} {{ t('مراحل المسؤول','Admin’s grades') if s.is_grade_admin else t('اجعله مسؤولاً','Make admin') }}</a>{% endif %}
+      {% if fully_mine.get(s.id) and not s.is_grade_admin %}
+      <form method="post" class="inline" action="{{ url_for('admin.servant_toggle', servant_id=s.id) }}" data-confirm="{{ t('تأكيد تغيير حالة الحساب؟','Change this account status?') }}">{{ csrf() }}
+        <button class="btn btn-sm {{ 'btn-ghost' if s.is_active else 'btn-soft' }}" type="submit">{{ t('تعطيل','Disable') if s.is_active else t('تفعيل','Enable') }}</button></form>
+      <form method="post" class="inline" action="{{ url_for('admin.servant_delete', servant_id=s.id) }}" data-confirm="{{ t('حذف هذا الخادم نهائياً؟ الأطفال والحضور لا يتأثرون.','Delete this servant for good? Kids and attendance are not affected.') }}">{{ csrf() }}
+        <button class="btn btn-danger-soft btn-sm btn-icon" type="submit" aria-label="{{ t('حذف','Delete') }}">{{ icon('trash') }}</button></form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card">{% call empty('user', t('لا يوجد خدام بعد','No servants yet')) %}<a class="btn btn-primary" href="{{ url_for('admin.servant_new') }}">{{ icon('user-plus') }} {{ t('خادم جديد','New servant') }}</a>{% endcall %}</div>
+{% endif %}
+{% endblock %}

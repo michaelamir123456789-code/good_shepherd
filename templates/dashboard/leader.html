@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar %}
+{% block title %}{{ t('الرئيسية','Home') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ t('أهلاً،','Welcome,') }} {{ current_user.display_name(current_lang) }}</h1>
+    <p class="sub">{{ today|fdate }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('admin.kid_new') }}">{{ icon('plus') }} {{ t('طفل جديد','New kid') }}</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin.kids_import') }}">{{ icon('upload') }} {{ t('استيراد','Import') }}</a>
+  </div>
+</div>
+
+<div class="grid c4">
+  <a class="card stat" href="{{ url_for('admin.kids') }}"><span class="ico">{{ icon('users') }}</span><div><div class="val">{{ stats.kids }}</div><div class="lbl">{{ t('طفل','Kids') }}</div></div></a>
+  <a class="card stat gold" href="{{ url_for('admin.grades') }}"><span class="ico">{{ icon('school') }}</span><div><div class="val">{{ stats.classes }}</div><div class="lbl">{{ t('فصل','Classes') }}</div></div></a>
+  <a class="card stat" href="{{ url_for('admin.servants') }}"><span class="ico">{{ icon('user') }}</span><div><div class="val">{{ stats.servants }}</div><div class="lbl">{{ t('خادم','Servants') }}</div></div></a>
+  <a class="card stat ok" href="{{ url_for('reports.hub', date=att_date.isoformat()) }}"><span class="ico">{{ icon('chart') }}</span><div><div class="val">{{ stats.percent }}%</div><div class="lbl">{{ t('حضور','Attendance') }} · {{ att_date|fshort }}</div></div></a>
+</div>
+
+{% if my_overview %}
+<div class="section-title"><h2>{{ icon('school') }} {{ t('فصولي (أخدم فيها)','My classes (I serve in them)') }}</h2></div>
+<div class="grid auto mb-1">
+  {% for r in my_overview %}
+  <div class="card pad stack-sm">
+    <div class="row between"><div><h3>{{ r.klass.display_name(current_lang) }}</h3><div class="muted small">{{ r.grade.display_name(current_lang) }} · {{ r.total }} {{ t('طفل','kids') }}</div></div>
+      {% if r.taken %}<span class="badge {{ 'b-ok' if r.complete else 'b-warn' }}">{{ icon('check') }} {{ r.present }}/{{ r.total }}</span>{% else %}<span class="badge b-warn">{{ icon('clock') }} {{ t('لم يُسجَّل','Pending') }}</span>{% endif %}</div>
+    <div class="row wrap gap-sm">
+      <a class="btn {{ 'btn-soft' if r.taken else 'btn-primary' }} grow" href="{{ url_for('attendance.take', class_id=r.klass.id, date=att_date.isoformat()) }}">{{ icon('clipboard') }} {{ t('الحضور','Attendance') }}</a>
+      <a class="btn btn-ghost" href="{{ url_for('profiles.roster', class_id=r.klass.id) }}">{{ icon('users') }} {{ t('الأطفال','Kids') }}</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% if pending_requests %}
+<a class="notice n-info mt-1 notice-link" href="{{ url_for('admin.requests_list') }}">{{ icon('user-plus') }}<span><b>{{ pending_requests }}</b> {{ t('طلب إنشاء حساب ينتظر موافقتك','account request(s) waiting for your approval') }}</span></a>
+{% endif %}
+{% if pending %}
+<div class="notice n-warn mt-1">{{ icon('alert') }}
+  <span>{{ t('لم يُسجَّل الحضور بعد في','Attendance not yet taken in') }} {{ pending|length }} {{ t('فصل بتاريخ','class(es) for') }} {{ att_date|fdate(year=False) }}</span></div>
+{% endif %}
+
+<div class="cols mt-1">
+  <section class="stack">
+    <div class="card">
+      <div class="card-head"><h3>{{ icon('clipboard') }} {{ t('حضور','Attendance') }} {{ att_date|fdate(year=False) }}</h3>
+        <a class="btn btn-soft btn-sm" href="{{ url_for('reports.hub', date=att_date.isoformat()) }}">{{ t('التقرير الكامل','Full report') }}</a></div>
+      {% if overview %}
+      <ul class="list">
+        {% for r in overview %}
+        <li>
+          <div class="grow">
+            <div class="strong">{{ r.klass.display_name(current_lang) }}</div>
+            <div class="meta">{{ r.grade.display_name(current_lang) }} · {{ r.total }} {{ t('طفل','kids') }}</div>
+          </div>
+          {% if r.taken %}
+            <span class="badge {{ 'b-ok' if r.complete else 'b-warn' }}">{{ icon('check') }} {{ r.present }}/{{ r.total }}</span>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.daily', class_id=r.klass.id, date=att_date.isoformat()) }}">{{ t('عرض','View') }}</a>
+          {% else %}
+            <span class="badge b-warn">{{ icon('clock') }} {{ t('لم يُسجَّل','Pending') }}</span>
+            <a class="btn btn-primary btn-sm" href="{{ url_for('attendance.take', class_id=r.klass.id, date=att_date.isoformat()) }}">{{ t('تسجيل','Take') }}</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        {% from '_macros.html' import empty %}
+        {% call empty('school', t('لا توجد فصول بها أطفال بعد','No classes with kids yet'), t('ابدأ بإضافة مرحلة وفصل ثم الأطفال.','Start by adding a grade, a class, then kids.')) %}
+          <a class="btn btn-primary" href="{{ url_for('admin.grades') }}">{{ t('إدارة المراحل','Manage grades') }}</a>
+        {% endcall %}
+      {% endif %}
+    </div>
+
+    {% if trend %}
+    <div class="card pad">
+      <h3 class="mb-sm">{{ icon('chart') }} {{ t('نسبة الحضور — آخر الأسابيع','Attendance — recent weeks') }}</h3>
+      <div class="bars">
+        {% for p in trend %}
+        <div class="bar" title="{{ p.present }}/{{ p.total }}"><b>{{ p.pct }}%</b><i data-pct="{{ p.pct }}"></i><span>{{ p.date|fshort }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  <aside class="stack">
+    <div class="card {{ 'alertc' if alerts else '' }}">
+      <div class="card-head"><h3>{{ icon('alert') }} {{ t('يحتاجون متابعة','Need follow-up') }}</h3>
+        {% if alerts_total %}<span class="badge b-bad">{{ alerts_total }}</span>{% endif %}</div>
+      {% if alerts %}
+      <ul class="list">
+        {% for kid, streak in alerts %}
+        <li>
+          {{ avatar(kid, 'sm') }}
+          <div class="grow"><a class="strong" href="{{ url_for('profiles.view', kid_id=kid.id) }}">{{ kid.display_name(current_lang) }}</a>
+            <div class="meta">{{ kid.klass.display_name(current_lang) if kid.klass }} · {{ t('غاب','absent') }} {{ streak }} {{ t('مرات متتالية','times in a row') }}</div></div>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="card-head"><span class="small muted">{{ t('الحد الحالي:','Threshold:') }} {{ threshold }}</span>
+        <a class="btn btn-danger-soft btn-sm" href="{{ url_for('visitation.plan') }}">{{ icon('heart') }} {{ t('خطة الافتقاد','Visitation plan') }}</a></div>
+      {% else %}
+      <div class="empty"><div class="ico">{{ icon('check') }}</div><h3>{{ t('كله تمام','All good') }}</h3><p class="small">{{ t('لا يوجد أطفال تغيّبوا بشكل متكرر.','No kids with repeated absences.') }}</p></div>
+      {% endif %}
+    </div>
+
+    <a class="card stat warn" href="{{ url_for('visitation.plan') }}"><span class="ico">{{ icon('heart') }}</span>
+      <div><div class="val">{{ visits_due }}</div><div class="lbl">{{ t('طفل ينتظر افتقاداً','kids waiting for a visit') }}</div></div></a>
+  </aside>
+</div>
+{% include '_alert_modal.html' %}
+{% endblock %}

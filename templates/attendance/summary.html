@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, status_badge %}
+{% block title %}{{ t('ملخص الحضور','Attendance summary') }}{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('dashboard.home') }}">{{ icon('chev','i-flip') }} {{ t('الرئيسية','Home') }}</a>
+<div class="page-head">
+  <div><h1>{{ klass.display_name(current_lang) }}</h1><p class="sub">{{ target_date|fdate }}</p></div>
+  <div class="actions">
+    <a class="btn btn-ghost" href="{{ url_for('attendance.take', class_id=klass.id, date=target_date.isoformat()) }}">{{ icon('edit') }} {{ t('تعديل','Edit') }}</a>
+    <a class="btn btn-soft" href="{{ url_for('reports.export_daily', class_id=klass.id, date=target_date.isoformat()) }}">{{ icon('download') }} Excel</a>
+  </div>
+</div>
+<div class="grid c4 mb-1">
+  <div class="card stat ok"><span class="ico">{{ icon('check') }}</span><div><div class="val">{{ stats.present }}</div><div class="lbl">{{ t('حاضر','Present') }}</div></div></div>
+  <div class="card stat bad"><span class="ico">{{ icon('x') }}</span><div><div class="val">{{ stats.absent }}</div><div class="lbl">{{ t('غائب','Absent') }}</div></div></div>
+  <div class="card stat warn"><span class="ico">{{ icon('clock') }}</span><div><div class="val">{{ stats.excused }}</div><div class="lbl">{{ t('معذور','Excused') }}</div></div></div>
+  <div class="card stat"><span class="ico">{{ icon('users') }}</span><div><div class="val">{{ stats.total }}</div><div class="lbl">{{ t('الإجمالي','Total') }}</div></div></div>
+</div>
+<div class="card"><ul class="list">
+  {% for kid in kids %}{% set rec = record_map.get(kid.id) %}
+  <li>{{ avatar(kid,'sm') }}
+    <div class="grow"><a class="strong" href="{{ url_for('profiles.view', kid_id=kid.id) }}">{{ kid.display_name(current_lang) }}</a>
+      {% if rec and rec.excuse_note %}<div class="meta">{{ rec.excuse_note }}</div>{% endif %}</div>
+    {{ status_badge(rec.status if rec else none, current_lang) }}
+  </li>{% endfor %}
+</ul></div>
+{% endblock %}

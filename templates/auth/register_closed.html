@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}{{ t('إنشاء حساب','Create account') }}{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block outer %}
+<div class="auth-wrap"><div class="auth-card center">
+  <div class="brand-mark">{{ icon('lock') }}</div>
+  <h1>{{ t('التسجيل مغلق حالياً','Sign-up is closed right now') }}</h1>
+  <p class="tag">{{ t('اطلب من قائد الخدمة أو مسؤول مرحلتك إنشاء حسابك.','Ask the service leader or your grade admin to create your account.') }}</p>
+  <a class="btn btn-primary btn-lg btn-block" href="{{ url_for('auth.login') }}">{{ t('تسجيل الدخول','Sign in') }}</a>
+</div></div>
+{% endblock %}

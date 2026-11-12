@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty %}
+{% block title %}{{ t('تسجيل الحضور','Attendance') }}{% endblock %}
+{% block body_class %}focus{% endblock %}
+{% block content %}
+<a class="crumb" href="{{ url_for('dashboard.home') }}">{{ icon('chev','i-flip') }} {{ t('الرئيسية','Home') }}</a>
+<div class="page-head">
+  <div>
+    <h1>{{ klass.display_name(current_lang) }}</h1>
+    <p class="sub">{{ klass.grade.display_name(current_lang) }} · {{ target_date|fdate }}</p>
+  </div>
+  <div class="actions">
+    <span id="lock-chip" class="lock-chip">{{ icon('lock') }} {{ t('أنت تسجّل الآن','You are editing') }}</span>
+  </div>
+</div>
+
+<div id="lost-banner" class="notice n-bad mb-1 hidden">{{ icon('alert') }}
+  <span>{{ t('خادم آخر استلم تسجيل هذا الفصل. لن يمكنك الحفظ — حدّث الصفحة.','Another servant took over this class. You can no longer save — reload the page.') }}</span></div>
+
+{% if kids %}
+<form id="attendance-form" method="post" data-once novalidate>
+  {{ csrf() }}
+  <input type="hidden" name="date" value="{{ target_date.isoformat() }}">
+  <div id="attendance" class="card"
+       data-heartbeat="{{ url_for('attendance.heartbeat', class_id=klass.id, date=target_date.isoformat(), lang=current_lang) }}"
+       data-msg-incomplete="{{ t('لم تحدد حالة كل الأطفال بعد. الأطفال غير المحددين مظلّلون بالأحمر.','Not every kid is marked yet. Unmarked kids are highlighted in red.') }}"
+       data-msg-lost="{{ t('فقدت الجلسة','Session lost') }}">
+    <div class="card-head">
+      <div class="counters">
+        <span class="badge b-ok">{{ t('حاضر','Present') }} <b id="c-present" class="num">0</b></span>
+        <span class="badge b-bad">{{ t('غائب','Absent') }} <b id="c-absent" class="num">0</b></span>
+        <span class="badge b-warn">{{ t('معذور','Excused') }} <b id="c-excused" class="num">0</b></span>
+      </div>
+      <button class="btn btn-soft btn-sm" type="button" data-mark-all data-confirm-overwrite="{{ t('سيتم تحديد الجميع حاضراً، بما فيهم من حددتهم غائباً أو معذوراً. متابعة؟','Everyone will be set to present, including kids you marked absent or excused. Continue?') }}">{{ icon('check') }} {{ t('تحديد الكل حاضر','Select all present') }}</button>
+    </div>
+    {% for kid in kids %}
+    {% set m = marks.get(kid.id, {}) %}
+    <div class="kid-row {{ 'missing' if kid.id in missing_ids }}" data-status="{{ m.get('status','') }}">
+      <div class="who">
+        {{ avatar(kid, 'xl', zoom=True) }}
+        <div class="grow"><b>{{ kid.display_name(current_lang) }}</b>
+          {% if kid.area %}<span class="xs muted">{{ icon('pin') }} {{ kid.area }}</span>{% endif %}</div>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="{{ kid.display_name(current_lang) }}">
+        <label><input type="radio" name="status_{{ kid.id }}" value="present" {{ 'checked' if m.get('status')=='present' }}><span>{{ icon('check') }} {{ t('حاضر','Present') }}</span></label>
+        <label><input type="radio" name="status_{{ kid.id }}" value="absent" {{ 'checked' if m.get('status')=='absent' }}><span>{{ icon('x') }} {{ t('غائب','Absent') }}</span></label>
+        <label><input type="radio" name="status_{{ kid.id }}" value="excused" {{ 'checked' if m.get('status')=='excused' }}><span>{{ t('معذور','Excused') }}</span></label>
+      </div>
+      <input class="input note-input note" type="text" name="excuse_{{ kid.id }}" maxlength="255" value="{{ m.get('note','') }}" placeholder="{{ t('سبب الغياب / العذر (اختياري)','Reason (optional)') }}">
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="sticky-bar">
+    <div class="inner">
+      <div class="progress" aria-hidden="true"><i id="att-progress"></i></div>
+      <b id="att-count" class="num nowrap">0 / {{ kids|length }}</b>
+      <button class="btn btn-ghost" type="submit" form="release-form" formnovalidate>{{ t('خروج','Leave') }}</button>
+      <button id="att-save" class="btn btn-primary" type="submit">{{ icon('check') }} {{ t('حفظ','Save') }}</button>
+    </div>
+  </div>
+</form>
+<form id="release-form" method="post" action="{{ url_for('attendance.release', class_id=klass.id) }}">{{ csrf() }}<input type="hidden" name="date" value="{{ target_date.isoformat() }}"></form>
+{% else %}
+<div class="card">{% call empty('users', t('لا يوجد أطفال في هذا الفصل','No kids in this class')) %}{% endcall %}</div>
+{% endif %}
+{% endblock %}

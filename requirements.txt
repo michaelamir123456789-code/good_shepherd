@@ -1,0 +1,28 @@
+# Core
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-Migrate==4.0.7
+Flask-WTF==1.2.1
+Werkzeug==3.0.3
+python-dotenv==1.0.1
+email-validator==2.1.1
+tzdata==2024.1
+
+# Security
+Flask-Limiter==3.7.0
+
+# Images (kid photos) + Excel import/export
+Pillow>=11.3,<13
+openpyxl==3.1.2
+
+# PDF reports (Arabic needs shaping + right-to-left)
+reportlab>=4.2
+arabic-reshaper>=3.0
+# 0.4.2 on purpose: newer versions no longer mirror brackets ( ) [ ] in Arabic text
+python-bidi==0.4.2
+six>=1.16
+
+# Production
+gunicorn==22.0.0
+web: gunicorn "app:create_app()"

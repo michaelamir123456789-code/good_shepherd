@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon %}
+{% block title %}{{ t('تم إرسال الطلب','Request sent') }}{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block outer %}
+<div class="auth-wrap"><div class="auth-card center">
+  <div class="brand-mark ok">{{ icon('check') }}</div>
+  <h1>{{ t('تم إرسال طلبك','Your request was sent') }}</h1>
+  <p class="tag">{% if to %}{{ t('إلى','To') }} <b>{{ to }}</b>{% else %}{{ t('إلى مسؤول مرحلتك','To your grade admin') }}{% endif %}</p>
+  <div class="notice n-info text-start">{{ icon('info') }}<span>{{ t('عندما يوافق المسؤول على طلبك ستتمكن من تسجيل الدخول باسم المستخدم أو رقم الهاتف وكلمة المرور التي اخترتها.','When the admin approves your request you can sign in with your username or phone number and the password you chose.') }}</span></div>
+  <a class="btn btn-primary btn-lg btn-block mt-1" href="{{ url_for('auth.login') }}">{{ t('العودة لتسجيل الدخول','Back to sign in') }}</a>
+</div></div>
+{% endblock %}

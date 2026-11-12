@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty, pager %}
+{% block title %}{{ t('الأطفال','Kids') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('الأطفال','Kids') }}</h1><p class="sub num">{{ pagination.total }} {{ t('طفل','kids') }}</p></div>
+  <div class="actions">
+    {% if selected_class %}<a class="btn btn-ghost" href="{{ url_for('reports.pdf_kids', class_id=selected_class) }}">{{ icon('file') }} {{ t('قائمة الفصل PDF','Class list PDF') }}</a>{% endif %}
+    <a class="btn btn-ghost" href="{{ url_for('admin.kids_import', class_id=selected_class or None) }}">{{ icon('upload') }} {{ t('استيراد','Import') }}</a>
+    <a class="btn btn-primary" href="{{ url_for('admin.kid_new', class_id=selected_class or None) }}">{{ icon('plus') }} {{ t('طفل جديد','New kid') }}</a>
+  </div>
+</div>
+{% if current_user.is_manager %}<div class="tabs mb-1">
+  <a class="{{ 'on' if status != 'archived' }}" href="{{ url_for('admin.kids', class_id=selected_class or None) }}">{{ t('النشطون','Active') }}</a>
+  <a class="{{ 'on' if status == 'archived' }}" href="{{ url_for('admin.kids', status='archived') }}">{{ t('المحذوفون (الأرشيف)','Deleted (archive)') }}</a>
+</div>{% endif %}
+<form method="get" class="filter-bar">
+  <input type="hidden" name="status" value="{{ status }}">
+  <div class="search">{{ icon('search') }}<input class="input" type="search" name="q" value="{{ search }}" placeholder="{{ t('اسم، منطقة أو هاتف...','Name, area or phone...') }}"></div>
+  <select class="select" name="class_id" data-autosubmit>
+    <option value="">{{ t('كل الفصول','All classes') }}</option>
+    {% if current_user.is_admin %}<option value="0" {{ 'selected' if selected_class == 0 }}>{{ t('— بدون فصل —','— No class —') }}</option>{% endif %}
+    {% for c in all_classes %}<option value="{{ c.id }}" {{ 'selected' if selected_class == c.id }}>{{ c.grade.display_name(current_lang) }} — {{ c.display_name(current_lang) }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-soft" type="submit">{{ t('بحث','Search') }}</button>
+</form>
+{% if kids %}
+<div class="card"><div class="table-wrap"><table class="table table-cards">
+  <thead><tr><th>{{ t('الطفل','Kid') }}</th><th>{{ t('الفصل','Class') }}</th><th>{{ t('المنطقة','Area') }}</th><th>{{ t('الهاتف','Phone') }}</th><th></th></tr></thead>
+  <tbody>{% for k in kids %}
+  <tr>
+    <td class="main"><div class="row">{{ avatar(k,'sm') }}<a class="strong" href="{{ url_for('profiles.view', kid_id=k.id) }}">{{ k.display_name(current_lang) }}</a></div></td>
+    <td data-label="{{ t('الفصل','Class') }}">{{ k.klass.display_name(current_lang) if k.klass else '—' }}</td>
+    <td data-label="{{ t('المنطقة','Area') }}" class="muted">{{ k.area or '—' }}</td>
+    <td data-label="{{ t('الهاتف','Phone') }}" dir="ltr" class="muted num">{{ k.primary_phone or '—' }}</td>
+    <td data-label="" class="end nowrap">
+      <a class="btn btn-ghost btn-sm btn-icon" href="{{ url_for('admin.kid_edit', kid_id=k.id) }}" aria-label="{{ t('تعديل','Edit') }}">{{ icon('edit') }}</a>
+      {% if k.is_active %}
+      <form method="post" class="inline" action="{{ url_for('admin.kid_archive', kid_id=k.id) }}" data-confirm="{{ t('نقل الطفل إلى الأرشيف؟','Archive this kid?') }}">{{ csrf() }}
+        <button class="btn btn-ghost btn-sm btn-icon" type="submit" aria-label="{{ t('أرشفة','Archive') }}">{{ icon('archive') }}</button></form>
+      {% else %}
+      <form method="post" class="inline" action="{{ url_for('admin.kid_restore', kid_id=k.id) }}">{{ csrf() }}
+        <button class="btn btn-soft btn-sm" type="submit">{{ icon('restore') }} {{ t('استرجاع','Restore') }}</button></form>
+      {% endif %}
+    </td>
+  </tr>{% endfor %}</tbody></table></div></div>
+{{ pager(pagination, 'admin.kids', q=search or None, class_id=selected_class or None, status=status) }}
+{% else %}
+<div class="card">{% call empty('users', t('لا يوجد أطفال','No kids found')) %}{% endcall %}</div>
+{% endif %}
+{% endblock %}

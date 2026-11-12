@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, field, avatar %}
+{% block title %}{{ t('إنشاء حساب','Create account') }}{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block outer %}
+<div class="auth-wrap wide">
+  <div class="auth-card">
+    <div class="auth-lang lang-switch">
+      <a href="{{ url_for('auth.set_language', lang='ar') }}" class="{{ 'on' if current_lang=='ar' }}">ع</a>
+      <a href="{{ url_for('auth.set_language', lang='en') }}" class="{{ 'on' if current_lang=='en' }}">EN</a>
+    </div>
+    <div class="brand-mark">{{ icon('user-plus') }}</div>
+    <h1>{{ t('أنشئ حساب خادم','Create a servant account') }}</h1>
+    <p class="tag">{{ t('سيصل طلبك إلى مسؤول مرحلتك ليوافق عليه.','Your request goes to your grade admin for approval.') }}</p>
+
+    {% if not grades %}
+      <div class="notice n-warn">{{ icon('alert') }}<span>{{ t('لا توجد مراحل بعد. تواصل مع قائد الخدمة.','There are no grades yet. Contact the service leader.') }}</span></div>
+    {% else %}
+    <form method="post" novalidate data-once>
+      {{ csrf() }}
+      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+      {{ field('name_ar', t('الاسم الكامل','Full name'), form.get('name_ar',''), required=True, maxlength=120, autocomplete='name') }}
+      {{ field('username', t('اسم المستخدم','Username'), form.get('username',''), required=True, ltr=True, maxlength=30, autocomplete='username',
+               help=t('إنجليزي بدون مسافات، مثال: michael.amir — تستخدمه للدخول','English letters, no spaces, e.g. michael.amir — you will use it to sign in')) }}
+      {{ field('phone', t('رقم الهاتف','Phone number'), form.get('phone',''), type='tel', required=True, ltr=True, maxlength=20, autocomplete='tel',
+               help=t('يمكنك أيضاً الدخول به','You can sign in with it too')) }}
+
+      <div class="field">
+        <label for="password">{{ t('كلمة المرور','Password') }} <span class="req">*</span></label>
+        <div class="input-group">
+          <input class="input ltr" id="password" name="password" type="password" required autocomplete="new-password" dir="ltr" maxlength="128" data-pw-rules="#rules">
+          <button type="button" class="btn btn-ghost btn-icon btn-sm toggle" data-toggle-password="#password" aria-label="{{ t('إظهار','Show') }}"><span class="eye-on">{{ icon('eye') }}</span><span class="eye-off hidden">{{ icon('eye-off') }}</span></button>
+        </div>
+        <ul class="pw-rules" id="rules">
+          <li data-rule="length">{{ t('8 أحرف على الأقل','8+ characters') }}</li><li data-rule="upper">A-Z</li><li data-rule="lower">a-z</li>
+          <li data-rule="digit">{{ t('رقم','Number') }}</li><li data-rule="special">{{ t('رمز خاص !@#','Symbol !@#') }}</li><li data-rule="nospace">{{ t('بدون مسافات','No spaces') }}</li>
+        </ul>
+      </div>
+
+      <div class="field">
+        <label for="grade_id">{{ t('المرحلة التي ستخدم فيها','The grade you will serve in') }} <span class="req">*</span></label>
+        <select class="select" id="grade_id" name="grade_id" required data-grade-select="#admin-groups">
+          <option value="">{{ t('— اختر المرحلة —','— Choose a grade —') }}</option>
+          {% for g in grades %}<option value="{{ g.id }}" {{ 'selected' if form.get('grade_id','')|string == g.id|string }}>{{ g.display_name(current_lang) }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div id="admin-groups" data-selected="{{ form.get('admin_id','') }}">
+        {% for g in grades %}
+        <div class="admin-group hidden" data-grade-group="{{ g.id }}">
+          <span class="label">{{ t('أرسل الطلب إلى','Send the request to') }}</span>
+          {% if admins[g.id] %}
+          <div class="pick-list">
+            <label class="check-card"><input type="radio" name="admin_id" value="" checked><span>{{ t('أي مسؤول عن المرحلة','Any admin of this grade') }}</span></label>
+            {% for a in admins[g.id] %}
+            <label class="check-card"><input type="radio" name="admin_id" value="{{ a.id }}">{{ avatar(a,'sm') }}<span>{{ a.display_name(current_lang) }}</span></label>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="help m-0">{{ t('لا يوجد مسؤول معيّن لهذه المرحلة بعد، فسيصل طلبك إلى قائد الخدمة.','No admin is assigned to this grade yet, so your request goes to the service leader.') }}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <button class="btn btn-primary btn-lg btn-block mt-1" type="submit">{{ icon('check') }} {{ t('إرسال الطلب','Send request') }}</button>
+    </form>
+    {% endif %}
+    <div class="auth-alt"><a href="{{ url_for('auth.login') }}">{{ icon('chev','i-flip') }} {{ t('لديك حساب؟ تسجيل الدخول','Already have an account? Sign in') }}</a></div>
+  </div>
+</div>
+{% endblock %}

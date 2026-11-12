@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, avatar, csrf, empty %}
+{% set cat_labels = {'general': t('عام','General'), 'behavior': t('سلوك','Behavior'), 'health': t('صحة','Health'), 'spiritual': t('روحي','Spiritual')} %}
+{% set vt_labels = {'home': t('زيارة منزلية','Home visit'), 'phone': t('اتصال','Phone call'), 'church': t('في الكنيسة','At church')} %}
+{% block title %}{{ kid.display_name(current_lang) }}{% endblock %}
+{% block content %}
+{% if current_user.is_manager %}
+<a class="crumb" href="{{ url_for('admin.kids') }}">{{ icon('chev','i-flip') }} {{ t('الأطفال','Kids') }}</a>
+{% elif kid.class_id %}
+<a class="crumb" href="{{ url_for('profiles.roster', class_id=kid.class_id) }}">{{ icon('chev','i-flip') }} {{ kid.klass.display_name(current_lang) }}</a>
+{% endif %}
+
+<div class="card pad">
+  <div class="row wrap gap-lg">
+    {{ avatar(kid,'xxl', zoom=True) }}
+    <div class="grow">
+      <h1>{{ kid.display_name(current_lang) }}</h1>
+      <div class="row wrap gap-sm mt-sm">
+        {% if kid.klass %}<span class="badge b-brand">{{ icon('school') }} {{ kid.klass.display_name(current_lang) }}</span>{% endif %}
+        {% if kid.age %}<span class="badge">{{ kid.age }} {{ t('سنة','yrs') }}</span>{% endif %}
+        {% if kid.area %}<span class="badge">{{ icon('pin') }} {{ kid.area }}</span>{% endif %}
+        {% if not kid.is_active %}<span class="badge b-warn">{{ icon('archive') }} {{ t('مؤرشف','Archived') }}</span>{% endif %}
+        {% if streak >= threshold %}<span class="badge b-bad">{{ icon('alert') }} {{ t('غاب','Absent') }} {{ streak }} {{ t('متتالية','in a row') }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="row wrap gap-sm no-print">
+      {% if kid.is_active %}<a class="btn btn-ghost" href="{{ url_for('admin.kid_edit', kid_id=kid.id) }}">{{ icon('edit') }} {{ t('تعديل','Edit') }}</a>
+      <form method="post" class="inline" action="{{ url_for('admin.kid_archive', kid_id=kid.id) }}" data-confirm="{{ t('حذف هذا الطفل من الفصل؟ (يستطيع المسؤول استرجاعه)','Delete this kid from the class? (an admin can restore)') }}">{{ csrf() }}
+        <button class="btn btn-danger-soft" type="submit">{{ icon('trash') }} {{ t('حذف','Delete') }}</button></form>{% endif %}
+      <a class="btn btn-soft" href="{{ url_for('reports.kid_history', kid_id=kid.id) }}">{{ icon('chart') }} {{ t('سجل الحضور','History') }}</a>
+      <a class="btn btn-soft" href="{{ url_for('reports.pdf_kid', kid_id=kid.id) }}">{{ icon('file') }} {{ t('ملف الطفل PDF','Kid file (PDF)') }}</a>
+    </div>
+  </div>
+</div>
+
+{% if kid.father_phone or kid.mother_phone or kid.kid_phone %}
+<div class="phones mt-1">
+  {% for label, num in [(t('الأب','Father'), kid.father_phone), (t('الأم','Mother'), kid.mother_phone), (t('الطفل','Kid'), kid.kid_phone)] if num %}
+  <a class="phone-btn" href="tel:{{ num }}"><span class="ico">{{ icon('phone') }}</span><span><small>{{ label }}</small><b>{{ num }}</b></span></a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="cols mt-1">
+  <section class="stack">
+    <div class="card pad">
+      <h3 class="mb-sm">{{ icon('calendar') }} {{ t('آخر حضور','Recent attendance') }}</h3>
+      {% if attendance %}<div class="dots">
+        {% for r in attendance|reverse %}<div class="dot {{ r.status }}" title="{{ r.date|fdate }}"><i>{{ icon({'present':'check','absent':'x','excused':'clock'}[r.status]) }}</i>{{ r.date|fshort }}</div>{% endfor %}
+      </div>{% else %}<p class="muted small m-0">{{ t('لا يوجد سجل بعد.','No records yet.') }}</p>{% endif %}
+    </div>
+
+    <div class="card pad">
+      <h3 class="mb-sm">{{ icon('note') }} {{ t('ملاحظات','Notes') }}</h3>
+      <form method="post" action="{{ url_for('profiles.add_note', kid_id=kid.id) }}" data-once class="no-print">
+        {{ csrf() }}
+        <div class="field"><textarea class="textarea" name="content" maxlength="2000" required placeholder="{{ t('اكتب ملاحظة عن الطفل...','Write a note about this kid...') }}"></textarea></div>
+        <div class="row wrap">
+          <select class="select w-auto" name="category" aria-label="{{ t('التصنيف','Category') }}">
+            {% for k, v in cat_labels.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+          </select>
+          <button class="btn btn-primary" type="submit">{{ icon('plus') }} {{ t('إضافة','Add') }}</button>
+        </div>
+      </form>
+      <div class="mt-1">
+      {% for n in notes %}
+        <div class="note-item">
+          <div class="row between wrap gap-sm"><span class="badge b-info">{{ cat_labels.get(n.category, n.category or '') }}</span>
+            <span class="xs muted">{{ n.author.display_name(current_lang) if n.author else '—' }} · {{ n.created_at|ftime }}</span></div>
+          <p class="pre-wrap mt-sm mb-0">{{ n.content }}</p>
+          {% if current_user.is_manager or (n.author_id == current_user.id) %}
+          <form method="post" class="inline no-print" action="{{ url_for('profiles.delete_note', kid_id=kid.id, note_id=n.id) }}" data-confirm="{{ t('حذف هذه الملاحظة؟','Delete this note?') }}">{{ csrf() }}
+            <button class="btn btn-sm btn-ghost mt-sm" type="submit">{{ icon('trash') }} {{ t('حذف','Delete') }}</button></form>
+          {% endif %}
+        </div>
+      {% else %}<p class="muted small m-0">{{ t('لا توجد ملاحظات.','No notes yet.') }}</p>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <aside class="stack">
+    <div class="card pad no-print">
+      <h3 class="mb-sm">{{ icon('camera') }} {{ t('صورة الطفل','Photo') }}</h3>
+      <div class="photo-box">
+        <form method="post" enctype="multipart/form-data" action="{{ url_for('profiles.update_photo', kid_id=kid.id) }}">{{ csrf() }}
+          <span class="btn btn-soft file-btn">{{ icon('camera') }} {{ t('تغيير الصورة','Change photo') if kid.photo_filename else t('إضافة صورة','Add photo') }}
+            <input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/*" data-autosubmit aria-label="{{ t('اختر صورة','Choose a photo') }}"></span>
+        </form>
+        {% if kid.photo_filename %}
+        <form method="post" action="{{ url_for('profiles.update_photo', kid_id=kid.id) }}" data-confirm="{{ t('حذف الصورة؟','Remove the photo?') }}">{{ csrf() }}
+          <input type="hidden" name="action" value="remove">
+          <button class="btn btn-ghost btn-sm" type="submit">{{ icon('trash') }} {{ t('حذف','Remove') }}</button></form>
+        {% endif %}
+      </div>
+      <p class="help mt-sm m-0">{{ t('من الموبايل: اختر "التقاط صورة". تُقصّ مربعة تلقائياً.','On a phone you can take the photo directly. It is cropped square automatically.') }}</p>
+    </div>
+    <div class="card pad">
+      <h3 class="mb-sm">{{ icon('user') }} {{ t('بيانات','Details') }}</h3>
+      <dl class="dl">
+        {% if kid.mother_name %}<dt>{{ t('اسم الأم','Mother') }}</dt><dd>{{ kid.mother_name }}</dd>{% endif %}
+        {% if kid.school %}<dt>{{ t('المدرسة','School') }}</dt><dd>{{ kid.school }}</dd>{% endif %}
+        {% if kid.confession_father %}<dt>{{ t('أب الاعتراف','Confession') }}</dt><dd>{{ kid.confession_father }}</dd>{% endif %}
+        {% if kid.siblings %}<dt>{{ t('الإخوة','Siblings') }}</dt><dd>{{ kid.siblings }}</dd>{% endif %}
+        {% if kid.birth_date %}<dt>{{ t('الميلاد','Born') }}</dt><dd>{{ kid.birth_date|fdate(weekday=False) }}</dd>{% endif %}
+        {% if kid.gender %}<dt>{{ t('النوع','Gender') }}</dt><dd>{{ t('ولد','Boy') if kid.gender=='male' else t('بنت','Girl') }}</dd>{% endif %}
+        {% if kid.area %}<dt>{{ t('المنطقة','Area') }}</dt><dd>{{ kid.area }}</dd>{% endif %}
+        {% if kid.address %}<dt>{{ t('العنوان','Address') }}</dt><dd>{{ kid.address }}</dd>{% endif %}
+        {% if kid.general_notes %}<dt>{{ t('ملاحظات','Notes') }}</dt><dd class="pre-wrap">{{ kid.general_notes }}</dd>{% endif %}
+      </dl>
+    </div>
+    <div class="card pad">
+      <h3 class="mb-sm">{{ icon('heart') }} {{ t('الافتقاد','Visits') }}</h3>
+      {% for v in visits %}
+      <div class="note-item"><div class="row between"><b class="small">{{ vt_labels.get(v.visit_type, v.visit_type) }}</b><span class="xs muted">{{ v.visit_date|fdate(weekday=False) }}</span></div>
+        {% if v.notes %}<p class="small pre-wrap m-0">{{ v.notes }}</p>{% endif %}
+        <div class="xs muted">{{ v.servant.display_name(current_lang) if v.servant else '' }}</div></div>
+      {% else %}<p class="muted small m-0">{{ t('لم يُفتقد بعد.','Not visited yet.') }}</p>{% endfor %}
+    </div>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, empty %}
+{% block title %}{{ t('التقارير','Reports') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('تقارير الحضور','Attendance reports') }}</h1><p class="sub">{{ target_date|fdate }}</p></div>
+  <div class="actions">
+    <form method="get" class="row gap-sm">
+      <input class="input w-auto" type="date" name="date" value="{{ target_date.isoformat() }}" max="{{ target_date.today().isoformat() }}" data-autosubmit aria-label="{{ t('التاريخ','Date') }}">
+    </form>
+    {% if rows %}<a class="btn btn-soft" href="{{ url_for('reports.pdf_summary', date=target_date.isoformat()) }}">{{ icon('file') }} PDF</a>{% endif %}
+    {% if current_user.is_manager and rows %}<a class="btn btn-ghost" href="{{ url_for('reports.export_summary', date=target_date.isoformat()) }}">{{ icon('download') }} Excel</a>{% endif %}
+  </div>
+</div>
+
+{% if rows %}
+<div class="grid c4 mb-1">
+  <div class="card stat ok"><span class="ico">{{ icon('check') }}</span><div><div class="val">{{ overall.present }}</div><div class="lbl">{{ t('حاضر','Present') }}</div></div></div>
+  <div class="card stat bad"><span class="ico">{{ icon('x') }}</span><div><div class="val">{{ overall.absent }}</div><div class="lbl">{{ t('غائب','Absent') }}</div></div></div>
+  <div class="card stat warn"><span class="ico">{{ icon('clock') }}</span><div><div class="val">{{ overall.excused }}</div><div class="lbl">{{ t('معذور','Excused') }}</div></div></div>
+  <div class="card stat"><span class="ico">{{ icon('chart') }}</span><div><div class="val">{{ overall.percent }}%</div><div class="lbl">{{ t('نسبة الحضور','Attendance rate') }}</div></div></div>
+</div>
+{% if pending %}<div class="notice n-warn mb-1">{{ icon('alert') }}<span>{{ pending }} {{ t('فصل لم يُسجَّل حضوره بعد','class(es) not recorded yet') }}</span></div>{% endif %}
+
+<div class="card"><div class="table-wrap">
+<table class="table table-cards">
+  <thead><tr><th>{{ t('الفصل','Class') }}</th><th>{{ t('المرحلة','Grade') }}</th><th class="c">{{ t('حاضر','Present') }}</th><th class="c">{{ t('غائب','Absent') }}</th><th class="c">{{ t('معذور','Excused') }}</th><th>{{ t('النسبة','Rate') }}</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td class="main"><b>{{ r.klass.display_name(current_lang) }}</b></td>
+    <td data-label="{{ t('المرحلة','Grade') }}" class="muted">{{ r.grade.display_name(current_lang) }}</td>
+    <td data-label="{{ t('حاضر','Present') }}" class="c num">{{ r.present if r.taken else '—' }}</td>
+    <td data-label="{{ t('غائب','Absent') }}" class="c num">{{ r.absent if r.taken else '—' }}</td>
+    <td data-label="{{ t('معذور','Excused') }}" class="c num">{{ r.excused if r.taken else '—' }}</td>
+    <td data-label="{{ t('النسبة','Rate') }}">
+      {% if r.taken %}<div class="row gap-sm"><div class="meter grow"><i data-pct="{{ (r.present*100/r.total)|round|int }}"></i></div><span class="num small">{{ (r.present*100/r.total)|round|int }}%</span></div>
+      {% else %}<span class="badge b-warn">{{ t('لم يُسجَّل','Pending') }}</span>{% endif %}
+    </td>
+    <td data-label="" class="end"><a class="btn btn-ghost btn-sm" href="{{ url_for('reports.daily', class_id=r.klass.id, date=target_date.isoformat()) }}">{{ t('تفاصيل','Details') }}</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% else %}
+<div class="card">{% call empty('chart', t('لا توجد بيانات','No data'), t('لا توجد فصول بها أطفال ضمن صلاحياتك.','No classes with kids in your scope.')) %}{% endcall %}</div>
+{% endif %}
+{% endblock %}

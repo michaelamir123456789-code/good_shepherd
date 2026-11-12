@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import icon, csrf, empty %}
+{% block title %}{{ t('المراحل والفصول','Grades & classes') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ t('المراحل والفصول','Grades & classes') }}</h1><p class="sub">{{ t('ابدأ بالمرحلة، ثم أضف الفصول داخلها.','Start with a grade, then add classes inside it.') }}</p></div>
+  {% if current_user.is_admin %}<div class="actions"><a class="btn btn-primary" href="{{ url_for('admin.grade_new') }}">{{ icon('plus') }} {{ t('مرحلة جديدة','New grade') }}</a></div>{% endif %}
+</div>
+{% if grades %}
+<div class="grid auto">
+  {% for g in grades %}
+  <div class="card pad stack-sm">
+    <div class="row between"><h3>{{ g.display_name(current_lang) }}</h3><span class="badge b-brand">{{ counts.get(g.id, 0) }} {{ t('فصل','classes') }}</span></div>
+    <div class="small"><span class="muted">{{ icon('shield') }} {{ t('المسؤولون','Admins') }}:</span>
+      {% for a in g.admins if a.is_active %}<span class="badge b-gold">{{ a.display_name(current_lang) }}</span>{% else %}<span class="badge b-warn">{{ t('لا يوجد مسؤول بعد','No admin yet') }}</span>{% endfor %}</div>
+    <form method="post" action="{{ url_for('admin.grade_threshold', grade_id=g.id) }}" class="row gap-sm small">{{ csrf() }}
+      <label class="muted" for="aw-{{ g.id }}">{{ icon('alert') }} {{ t('تنبيه الغياب بعد','Absence alert after') }}</label>
+      <select class="select w-auto" id="aw-{{ g.id }}" name="absence_weeks" data-autosubmit>
+        <option value="0" {{ 'selected' if not g.absence_weeks }}>{{ t('الافتراضي','Default') }} ({{ settings.absence_threshold }})</option>
+        {% for n in range(1, 9) %}<option value="{{ n }}" {{ 'selected' if g.absence_weeks == n }}>{{ n }}</option>{% endfor %}
+      </select><span class="muted">{{ t('أسابيع','weeks') }}</span>
+    </form>
+    <div class="row wrap gap-sm">
+      <a class="btn btn-primary btn-sm grow" href="{{ url_for('admin.classes', grade_id=g.id) }}">{{ icon('school') }} {{ t('الفصول','Classes') }}</a>
+      <a class="btn btn-soft btn-sm" href="{{ url_for('admin.grade_admins', grade_id=g.id) }}">{{ icon('shield') }} {{ t('المسؤولون','Admins') }}</a>
+      {% if current_user.is_admin %}
+      <a class="btn btn-ghost btn-sm btn-icon" href="{{ url_for('admin.grade_edit', grade_id=g.id) }}" aria-label="{{ t('تعديل','Edit') }}">{{ icon('edit') }}</a>
+      <form method="post" class="inline" action="{{ url_for('admin.grade_delete', grade_id=g.id) }}" data-confirm="{{ t('حذف هذه المرحلة؟','Delete this grade?') }}">{{ csrf() }}
+        <button class="btn btn-danger-soft btn-sm btn-icon" type="submit" aria-label="{{ t('حذف','Delete') }}">{{ icon('trash') }}</button></form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">{% call empty('layers', t('لا توجد مراحل بعد','No grades yet'), t('أضف أول مرحلة (مثل: ابتدائي).','Add your first grade (e.g. Primary).') if current_user.is_admin else t('لم يُعيَّن لك مرحلة بعد. تواصل مع قائد الخدمة.','No grade is assigned to you yet. Ask the service leader.')) %}
+{% if current_user.is_admin %}<a class="btn btn-primary" href="{{ url_for('admin.grade_new') }}">{{ icon('plus') }} {{ t('مرحلة جديدة','New grade') }}</a>{% endif %}{% endcall %}</div>
+{% endif %}
+{% endblock %}
