@@ -1,0 +1,37 @@
+# 1. Secrets & Environment (NEVER upload)
+.env
+.env.local
+
+# 2. Database & User Data (NEVER upload local DBs)
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# 3. Python Cache (NEVER upload compiled files)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 4. Virtual Environments
+venv/
+.venv/
+env/
+.Python
+
+# 5. Local Scripts & Tests (Not needed on Vercel)
+tests/
+check_login.py
+reset_password.py
+pytest.ini
+
+# 6. IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 7. Logs & Backups
+*.log
+logs/
+backups/
